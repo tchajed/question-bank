@@ -48,22 +48,22 @@ type RenderData struct {
 func renderQuestionTeX(q *renderQuestion) string {
 	var sb strings.Builder
 
-	sb.WriteString(fmt.Sprintf("%% %s | topic: %s | difficulty: %s", q.Id, q.Topic, q.Difficulty))
+	fmt.Fprintf(&sb, "%% %s | topic: %s | difficulty: %s", q.Id, q.Topic, q.Difficulty)
 	if q.Points > 1 {
-		sb.WriteString(fmt.Sprintf(" | points: %d", q.Points))
+		fmt.Fprintf(&sb, " | points: %d", q.Points)
 	}
 	sb.WriteString("\n")
 
-	sb.WriteString(fmt.Sprintf("\\question[%d]\n", q.Points))
+	fmt.Fprintf(&sb, "\\question[%d]\n", q.Points)
 	if q.ShowMetadata {
-		sb.WriteString(fmt.Sprintf("{\\footnotesize\\textsf{%s \\textbar{} topic: %s \\textbar{} difficulty: %s}}\\\\[2pt]\n", q.Id, q.Topic, q.Difficulty))
+		fmt.Fprintf(&sb, "{\\footnotesize\\textsf{%s \\textbar{} topic: %s \\textbar{} difficulty: %s}}\\\\[2pt]\n", q.Id, q.Topic, q.Difficulty)
 	}
 	sb.WriteString(q.Stem)
 	sb.WriteString("\n")
 
 	if q.Figure != "" {
 		sb.WriteString("\n\\begin{center}\n")
-		sb.WriteString(fmt.Sprintf("  \\includegraphics[width=0.5\\textwidth]{%s}\n", q.Figure))
+		fmt.Fprintf(&sb, "  \\includegraphics[width=0.5\\textwidth]{%s}\n", q.Figure)
 		sb.WriteString("\\end{center}\n")
 	}
 
@@ -71,19 +71,19 @@ func renderQuestionTeX(q *renderQuestion) string {
 	if q.Type == string(question.TrueFalse) {
 		choicesEnv = "checkboxes"
 	}
-	sb.WriteString(fmt.Sprintf("\\begin{%s}\n", choicesEnv))
+	fmt.Fprintf(&sb, "\\begin{%s}\n", choicesEnv)
 	for _, c := range q.Choices {
 		if c.Correct {
-			sb.WriteString(fmt.Sprintf("  \\CorrectChoice %s\n", c.Text))
+			fmt.Fprintf(&sb, "  \\CorrectChoice %s\n", c.Text)
 		} else {
-			sb.WriteString(fmt.Sprintf("  \\choice %s\n", c.Text))
+			fmt.Fprintf(&sb, "  \\choice %s\n", c.Text)
 		}
 	}
-	sb.WriteString(fmt.Sprintf("\\end{%s}\n", choicesEnv))
+	fmt.Fprintf(&sb, "\\end{%s}\n", choicesEnv)
 
 	if q.Explanation != "" {
 		sb.WriteString("\\ifprintanswers\n")
-		sb.WriteString(fmt.Sprintf("\\textbf{Solution:} %s\n", q.Explanation))
+		fmt.Fprintf(&sb, "\\textbf{Solution:} %s\n", q.Explanation)
 		sb.WriteString("\\fi\n")
 	}
 
