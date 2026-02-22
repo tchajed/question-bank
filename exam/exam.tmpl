@@ -1,0 +1,33 @@
+\documentclass[12pt,addpoints]{exam}
+
+\usepackage{palatino}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+<<- with .Preamble>>
+<<.>>
+<<- end>>
+
+\newcommand{\ExamCourse}{<<.CourseCode>>}
+\newcommand{\ExamTitle}{<<.Title>>}
+\newcommand{\ExamSemester}{<<.Semester>>}
+\newcommand{\ExamDuration}{<<.Duration>>}
+\newcommand{\ExamNumQuestions}{<<.NumQuestions>>}
+
+\begin{document}
+
+\header{\ExamCourse}{\ExamTitle}{\ExamSemester}
+\cfoot{Page \thepage}
+
+\begin{coverpages}
+<<.CoverPage ->>\end{coverpages}
+
+\begin{questions}
+<<range .Sections>>
+\section*{<<.Name>>}
+
+<<range .Questions>><<renderQuestion .>>
+
+<<end>><<end>>\end{questions}
+
+\end{document}

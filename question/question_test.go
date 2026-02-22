@@ -17,7 +17,7 @@ func TestParseFile(t *testing.T) {
 	assert.Equal(t, "virtual-memory/paging", q.Topic)
 	assert.Equal(t, question.DifficultyMedium, q.Difficulty)
 	assert.Equal(t, question.MultipleChoice, q.Type)
-	assert.Equal(t, "figures/two-level-page-table.svg", q.Figure)
+	assert.Equal(t, "figures/two-level-page-table.png", q.Figure)
 	assert.Equal(t, 2, q.Points)
 	assert.NotEmpty(t, q.Stem)
 	require.Len(t, q.Choices, 3)

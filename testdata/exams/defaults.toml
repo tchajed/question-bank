@@ -1,0 +1,46 @@
+course_code = "CS 537"
+
+cover_page = '''
+\noindent
+{\Large\textbf{\ExamCourse{} \ExamTitle}}\\[5pt]
+{\large \ExamSemester}\\[0.5cm]
+
+\noindent
+\ExamDuration{} / \ExamNumQuestions{} questions
+
+\paragraph{Instructions.} Fill your answers into your scantron sheet with a
+pencil. For True/False questions, fill in A for True and B for False. Please
+fill in your name and student ID on the answer sheet. Without your ID, you
+might not receive a grade.
+
+This is a closed-book exam. You are permitted an 8.5x11" sheet of notes (a
+"cheat sheet"). You should turn in your scantron with your answers, as well as
+your question sheet and cheat sheet, at the end of the exam.
+
+\paragraph{Academic integrity.} You should abide by the following:
+\begin{itemize}
+\item I understand that this exam must be worked on independently.
+\item I will not ask for, receive, or provide help to others.
+\item I will notify the instructor if I am aware of others violating this policy.
+\item I will not discuss the questions with students of the other section.
+\end{itemize}
+
+\paragraph{Assumptions.}
+Unless stated otherwise, you should make the following assumptions:
+\begin{itemize}
+\item The OS manages a single uniprocessor (single core).
+\item Page table entries require 4 bytes unless otherwise stated.
+\item Data is allocated with optimal alignment, starting at the beginning of a page.
+\item Hex numbers are represented with a preceding "0x"; numbers without 0x are decimal.
+\item 1KB is 1024 bytes
+\end{itemize}
+
+\paragraph{Potentially useful facts.}
+\begin{itemize}
+\item 1 byte = 8 bits
+\item 1 hex digit = 4 bits
+\item $2^{10}$ = 1024 (1KB)
+\item $2^{12}$ = 4096 (4KB)
+\item $2^{22}$ = 4,194,304 (4MB; 4096KB)
+\end{itemize}
+'''

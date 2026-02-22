@@ -1,0 +1,158 @@
+package exam
+
+import (
+	"bytes"
+	_ "embed"
+	"fmt"
+	"path/filepath"
+	"strings"
+	"text/template"
+
+	"github.com/tchajed/question-bank/question"
+)
+
+//go:embed exam.tmpl
+var examTemplate string
+
+type renderSection struct {
+	Name      string
+	Questions []*renderQuestion
+}
+
+type renderQuestion struct {
+	Id          string
+	Topic       string
+	Difficulty  string
+	Points      int
+	Stem        string
+	Type        string
+	Choices     []question.Choice
+	Explanation string
+	Figure      string // relative path for \includegraphics (no extension)
+}
+
+// RenderData is the top-level data passed to the LaTeX template.
+type RenderData struct {
+	CourseCode   string
+	Title        string
+	Semester     string
+	Duration     string
+	CoverPage    string
+	Preamble     string
+	NumQuestions int
+	Sections     []renderSection
+}
+
+func renderQuestionTeX(q *renderQuestion) string {
+	var sb strings.Builder
+
+	sb.WriteString(fmt.Sprintf("%% %s | topic: %s | difficulty: %s", q.Id, q.Topic, q.Difficulty))
+	if q.Points > 1 {
+		sb.WriteString(fmt.Sprintf(" | points: %d", q.Points))
+	}
+	sb.WriteString("\n")
+
+	sb.WriteString(fmt.Sprintf("\\question[%d]\n", q.Points))
+	sb.WriteString(q.Stem)
+	sb.WriteString("\n")
+
+	if q.Figure != "" {
+		sb.WriteString("\n\\begin{center}\n")
+		sb.WriteString(fmt.Sprintf("  \\includegraphics[width=0.5\\textwidth]{%s}\n", q.Figure))
+		sb.WriteString("\\end{center}\n")
+	}
+
+	choicesEnv := "choices"
+	if q.Type == string(question.TrueFalse) {
+		choicesEnv = "checkboxes"
+	}
+	sb.WriteString(fmt.Sprintf("\\begin{%s}\n", choicesEnv))
+	for _, c := range q.Choices {
+		if c.Correct {
+			sb.WriteString(fmt.Sprintf("  \\CorrectChoice %s\n", c.Text))
+		} else {
+			sb.WriteString(fmt.Sprintf("  \\choice %s\n", c.Text))
+		}
+	}
+	sb.WriteString(fmt.Sprintf("\\end{%s}\n", choicesEnv))
+
+	if q.Explanation != "" {
+		sb.WriteString("\\ifprintanswers\n")
+		sb.WriteString(fmt.Sprintf("\\textbf{Solution:} %s\n", q.Explanation))
+		sb.WriteString("\\fi\n")
+	}
+
+	return sb.String()
+}
+
+// Render generates a LaTeX document for the exam. bankDir and examDir are used
+// to compute figure paths relative to the output file location.
+func (e *Exam) Render(resolved *ResolvedExam, bankDir, examDir string) ([]byte, error) {
+	bankRel, err := filepath.Rel(examDir, bankDir)
+	if err != nil {
+		return nil, fmt.Errorf("computing bank relative path: %w", err)
+	}
+
+	numQuestions := 0
+	sections := make([]renderSection, len(resolved.Sections))
+	for i, sec := range resolved.Sections {
+		qs := make([]*renderQuestion, len(sec.Questions))
+		for j, q := range sec.Questions {
+			points := q.Points
+			if points == 0 {
+				points = 1
+			}
+			rq := &renderQuestion{
+				Id:          q.Id,
+				Topic:       q.Topic,
+				Difficulty:  string(q.Difficulty),
+				Points:      points,
+				Stem:        strings.TrimSpace(q.Stem),
+				Type:        string(q.Type),
+				Choices:     q.Choices,
+				Explanation: strings.TrimSpace(q.Explanation),
+			}
+			if q.Figure != "" {
+				fig := strings.TrimSuffix(q.Figure, filepath.Ext(q.Figure))
+				rq.Figure = filepath.Join(bankRel, fig)
+			}
+			qs[j] = rq
+			numQuestions++
+		}
+		sections[i] = renderSection{Name: sec.Name, Questions: qs}
+	}
+
+	// Normalize CoverPage: ensure it ends with exactly one newline.
+	coverPage := strings.TrimRight(e.CoverPage, " \t\n")
+	if coverPage != "" {
+		coverPage += "\n"
+	}
+
+	data := &RenderData{
+		CourseCode:   e.CourseCode,
+		Title:        e.Title,
+		Semester:     e.Semester,
+		Duration:     e.Duration,
+		CoverPage:    coverPage,
+		Preamble:     strings.TrimSpace(e.Preamble),
+		NumQuestions: numQuestions,
+		Sections:     sections,
+	}
+
+	funcs := template.FuncMap{
+		"renderQuestion": func(q *renderQuestion) (string, error) {
+			return renderQuestionTeX(q), nil
+		},
+	}
+
+	tmpl, err := template.New("exam").Delims("<<", ">>").Funcs(funcs).Parse(examTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("parsing template: %w", err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return nil, fmt.Errorf("executing template: %w", err)
+	}
+	return buf.Bytes(), nil
+}

@@ -1,6 +1,7 @@
 package exam_test
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -47,4 +48,56 @@ func TestResolveMissingQuestion(t *testing.T) {
 	}
 	_, err := e.Resolve(map[string]*question.Question{})
 	assert.ErrorContains(t, err, "nonexistent")
+}
+
+func TestLoadWithDefaults(t *testing.T) {
+	e, err := exam.LoadWithDefaults("../testdata/exams/exam.toml")
+	require.NoError(t, err)
+
+	// Fields from exam.toml
+	assert.Equal(t, "Midterm 1", e.Title)
+	assert.Equal(t, "SP 26", e.Semester)
+	assert.Equal(t, "75 minutes", e.Duration)
+
+	// Fields from defaults.toml
+	assert.Equal(t, "CS 537", e.CourseCode)
+	assert.NotEmpty(t, e.CoverPage)
+
+	// Sections from exam.toml
+	require.Len(t, e.Sections, 2)
+}
+
+func TestRender(t *testing.T) {
+	bank, err := question.LoadBank("../testdata/bank")
+	require.NoError(t, err)
+
+	e, err := exam.LoadWithDefaults("../testdata/exams/exam.toml")
+	require.NoError(t, err)
+
+	resolved, err := e.Resolve(bank)
+	require.NoError(t, err)
+
+	examDir, err := filepath.Abs("../testdata/exams")
+	require.NoError(t, err)
+	bankDir, err := filepath.Abs("../testdata/bank")
+	require.NoError(t, err)
+
+	latex, err := e.Render(resolved, bankDir, examDir)
+	require.NoError(t, err)
+
+	out := string(latex)
+	assert.Contains(t, out, `\documentclass[12pt,addpoints]{exam}`)
+	assert.Contains(t, out, `\newcommand{\ExamCourse}{CS 537}`)
+	assert.Contains(t, out, `\newcommand{\ExamTitle}{Midterm 1}`)
+	assert.Contains(t, out, `\newcommand{\ExamSemester}{SP 26}`)
+	assert.Contains(t, out, `\newcommand{\ExamNumQuestions}{3}`)
+	assert.Contains(t, out, `\section*{Operating Systems}`)
+	assert.Contains(t, out, `\section*{Virtual Memory}`)
+	assert.Contains(t, out, `\question[1]`)
+	assert.Contains(t, out, `\question[2]`)
+	assert.Contains(t, out, `\CorrectChoice`)
+	assert.Contains(t, out, `\includegraphics`)
+	assert.Contains(t, out, `\ifprintanswers`)
+	assert.Contains(t, out, `\begin{coverpages}`)
+	assert.Contains(t, out, `\ExamCourse{} \ExamTitle`)
 }
