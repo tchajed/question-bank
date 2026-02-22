@@ -36,8 +36,8 @@ func TestParseTrueFalse(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, question.TrueFalse, q.Type)
-	require.NotNil(t, q.Answer)
-	assert.False(t, *q.Answer)
+	require.NotNil(t, q.AnswerTF)
+	assert.False(t, *q.AnswerTF)
 
 	require.Len(t, q.Choices, 2)
 	assert.Equal(t, question.Choice{Text: "True", Correct: false}, q.Choices[0])
@@ -100,10 +100,10 @@ stem = "What is 2+2?"`))
 	t.Run("answer set defaults to true-false", func(t *testing.T) {
 		q, err := question.Parse([]byte(`topic = "os"
 stem = "The sky is blue."
-answer = true`))
+answer_tf = true`))
 		require.NoError(t, err)
 		assert.Equal(t, question.TrueFalse, q.Type)
-		require.NotNil(t, q.Answer)
-		assert.True(t, *q.Answer)
+		require.NotNil(t, q.AnswerTF)
+		assert.True(t, *q.AnswerTF)
 	})
 }

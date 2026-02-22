@@ -2,6 +2,7 @@
 package question
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -40,8 +41,16 @@ type Choice struct {
 // For true-false questions, Answer holds the correct answer (nil = not set).
 type Question struct {
 	// Id is derived from the file path (relative path without extension).
-	Id   string       `toml:"-"`
-	Type QuestionType `toml:"type"`
+	Id string `toml:"-"`
+	// Question prompt
+	Stem    string       `toml:"stem"`
+	Type    QuestionType `toml:"type"`
+	Choices []Choice     `toml:"choices"`
+	// Explanation of correct answer for solutions
+	Explanation string `toml:"explanation"`
+	// Answer for true-false questions
+	AnswerTF *bool `toml:"answer_tf,omitempty"`
+
 	// Topic helps categorize questions. Can be hierarchical, separated by '/'.
 	Topic string `toml:"topic"`
 	// Difficulty is easy/medium/hard
@@ -51,14 +60,7 @@ type Question struct {
 	// (Optional) figure to include alongside question stem.
 	Figure string `toml:"figure"`
 	// Optional: treated as 1 if 0 or omitted
-	Points int `toml:"points"`
-	// Question prompt
-	Stem string `toml:"stem"`
-	// Explanation of correct answer for solutions
-	Explanation string   `toml:"explanation"`
-	Choices     []Choice `toml:"choices"`
-	// Answer for true-false questions
-	Answer *bool `toml:"answer,omitempty"`
+	Points int `toml:"points,omitempty"`
 }
 
 // validate checks that required fields are present and consistent.
@@ -69,7 +71,7 @@ func (q *Question) validate() error {
 	if q.Stem == "" {
 		return fmt.Errorf("question missing required field: stem")
 	}
-	if q.Type == TrueFalse && q.Answer == nil {
+	if q.Type == TrueFalse && q.AnswerTF == nil {
 		return fmt.Errorf("true-false question missing required field: answer")
 	}
 	return nil
@@ -78,14 +80,16 @@ func (q *Question) validate() error {
 // Parse parses a Question from TOML-encoded bytes.
 func Parse(data []byte) (*Question, error) {
 	var q Question
-	if err := toml.Unmarshal(data, &q); err != nil {
+	dec := toml.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&q); err != nil {
 		return nil, err
 	}
 	if err := q.validate(); err != nil {
 		return nil, err
 	}
 	if q.Type == "" {
-		if q.Answer != nil {
+		if q.AnswerTF != nil {
 			q.Type = TrueFalse
 		} else {
 			q.Type = MultipleChoice
@@ -93,8 +97,8 @@ func Parse(data []byte) (*Question, error) {
 	}
 	if q.Type == TrueFalse {
 		q.Choices = []Choice{
-			{Text: "True", Correct: *q.Answer},
-			{Text: "False", Correct: !*q.Answer},
+			{Text: "True", Correct: *q.AnswerTF},
+			{Text: "False", Correct: !*q.AnswerTF},
 		}
 	}
 	return &q, nil

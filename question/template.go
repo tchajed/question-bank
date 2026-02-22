@@ -7,14 +7,15 @@ import (
 )
 
 type questionTemplate struct {
-	Stem    string           `toml:"stem,multiline" comment:"Required. The question prompt."`
-	Choices []choiceTemplate `toml:"choices,omitempty,inline" comment:"Answer choices"`
-	Answer  *bool            `toml:"answer,omitempty" comment:"Correct answer (true/false)"`
-	Topic   string           `toml:"topic" comment:"Used to organize questions."`
+	Stem        string           `toml:"stem,multiline" comment:"Required. The question prompt."`
+	Type        string           `toml:"type" comment:"Question type: 'multiple-choice' (default) or 'true-false'"`
+	Choices     []choiceTemplate `toml:"choices,omitempty,inline" comment:"Answer choices"`
+	Explanation string           `toml:"explanation,multiline" comment:"Explanation of the answer for solutions."`
+	AnswerTF    *bool            `toml:"answer_tf,omitempty" comment:"Correct answer for true/false"`
 
-	Explanation string `toml:"explanation,multiline" comment:"Explanation of the answer for solutions."`
+	// metadata:
 
-	Type       string   `toml:"type" comment:"Question type: 'multiple-choice' (default) or 'true-false'"`
+	Topic      string   `toml:"topic" comment:"Used to organize questions."`
 	Difficulty string   `toml:"difficulty"`
 	Tags       []string `toml:"tags" comment:"Keywords to categorize and find questions"`
 	Figure     string   `toml:"figure,omitempty,commented" comment:"Optional figure path to include alongside the question stem"`
@@ -63,6 +64,6 @@ func TrueFalseTemplate() ([]byte, error) {
 		Stem:        "\n",
 		Explanation: "\n",
 		Points:      1,
-		Answer:      &f,
+		AnswerTF:    &f,
 	})
 }
