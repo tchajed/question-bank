@@ -50,8 +50,6 @@ type Choice struct {
 // Question represents a single exam/quiz question.
 //
 // Required fields: Topic and Stem.
-//
-// For true-false questions, Answer holds the correct answer (nil = not set).
 type Question struct {
 	// Id is derived from the file path (relative path without extension).
 	Id string `toml:"-"`
