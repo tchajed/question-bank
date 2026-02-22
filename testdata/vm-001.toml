@@ -1,26 +1,20 @@
+stem = """
+A process uses a two-level page table. The page size is 4KB and each
+entry is 4 bytes. How many bytes of page table memory are required in
+the worst case for a process using 1GB of virtual address space?
+"""
+explanation = """
+In the worst case all second-level tables are allocated...
+"""
+choices = [
+    {text = "4MB", correct = true},
+    {text = "8MB"},
+    {text = "16MB"},
+]
+
 topic = "virtual-memory/paging"
 difficulty = "medium"
 tags = ["page-table", "address-translation"]
 type = "multiple-choice"
 figure = "figures/two-level-page-table.svg"
 points = 2
-
-stem = """
-A process uses a two-level page table. The page size is 4KB and each
-entry is 4 bytes. How many bytes of page table memory are required in
-the worst case for a process using 1GB of virtual address space?
-"""
-
-explanation = """
-In the worst case all second-level tables are allocated...
-"""
-
-[[choices]]
-text = "4MB"
-
-[[choices]]
-text = "8MB"
-correct = true
-
-[[choices]]
-text = "16MB"

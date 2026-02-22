@@ -1,16 +1,12 @@
 topic = "virtual-memory"
 difficulty = "easy"
 tags = ["tlb"]
-type = "true-false"
-points = 1
 
 stem = """
 A TLB miss always requires accessing main memory.
 """
-
 explanation = """
 A TLB miss requires a page table walk, but the page table entries may
 themselves be cached in the CPU cache.
 """
-
 answer = false

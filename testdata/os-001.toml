@@ -1,0 +1,15 @@
+stem = """
+Which of these is **not** an application benefit of an operating system?
+"""
+choices = [
+  {text = 'A set of simpler abstractions against which to program'},
+  {text = 'Independence from specific hardware and devices'},
+  {text = 'More control over how hardware is used', correct = true},
+]
+explanation = """
+An operating system gives less direct control over the hardware to applications.
+"""
+
+topic = 'os'
+difficulty = 'easy'
+tags = []
