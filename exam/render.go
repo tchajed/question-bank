@@ -20,15 +20,16 @@ type renderSection struct {
 }
 
 type renderQuestion struct {
-	Id          string
-	Topic       string
-	Difficulty  string
-	Points      int
-	Stem        string
-	Type        string
-	Choices     []question.Choice
-	Explanation string
-	Figure      string // relative path for \includegraphics (no extension)
+	Id           string
+	Topic        string
+	Difficulty   string
+	Points       int
+	Stem         string
+	Type         string
+	Choices      []question.Choice
+	Explanation  string
+	Figure       string // relative path for \includegraphics (no extension)
+	ShowMetadata bool
 }
 
 // RenderData is the top-level data passed to the LaTeX template.
@@ -41,6 +42,7 @@ type RenderData struct {
 	Preamble     string
 	NumQuestions int
 	Sections     []renderSection
+	PrintAnswers bool
 }
 
 func renderQuestionTeX(q *renderQuestion) string {
@@ -53,6 +55,9 @@ func renderQuestionTeX(q *renderQuestion) string {
 	sb.WriteString("\n")
 
 	sb.WriteString(fmt.Sprintf("\\question[%d]\n", q.Points))
+	if q.ShowMetadata {
+		sb.WriteString(fmt.Sprintf("{\\footnotesize\\textsf{%s \\textbar{} topic: %s \\textbar{} difficulty: %s}}\\\\[2pt]\n", q.Id, q.Topic, q.Difficulty))
+	}
 	sb.WriteString(q.Stem)
 	sb.WriteString("\n")
 
@@ -85,9 +90,18 @@ func renderQuestionTeX(q *renderQuestion) string {
 	return sb.String()
 }
 
+// RenderOptions controls optional rendering behavior.
+type RenderOptions struct {
+	// PrintAnswers adds \printanswers to the document, revealing solutions.
+	PrintAnswers bool
+	// ShowMetadata renders question metadata (ID, topic, difficulty) as
+	// visible text before each question.
+	ShowMetadata bool
+}
+
 // Render generates a LaTeX document for the exam. bankDir is used to compute
 // absolute figure paths.
-func (e *Exam) Render(resolved *ResolvedExam, bankDir string) ([]byte, error) {
+func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions) ([]byte, error) {
 	numQuestions := 0
 	sections := make([]renderSection, len(resolved.Sections))
 	for i, sec := range resolved.Sections {
@@ -98,14 +112,15 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string) ([]byte, error) {
 				points = 1
 			}
 			rq := &renderQuestion{
-				Id:          q.Id,
-				Topic:       q.Topic,
-				Difficulty:  string(q.Difficulty),
-				Points:      points,
-				Stem:        strings.TrimSpace(q.Stem),
-				Type:        string(q.Type),
-				Choices:     q.Choices,
-				Explanation: strings.TrimSpace(q.Explanation),
+				Id:           q.Id,
+				Topic:        q.Topic,
+				Difficulty:   string(q.Difficulty),
+				Points:       points,
+				Stem:         strings.TrimSpace(q.Stem),
+				Type:         string(q.Type),
+				Choices:      q.Choices,
+				Explanation:  strings.TrimSpace(q.Explanation),
+				ShowMetadata: opts.ShowMetadata,
 			}
 			if q.Figure != "" {
 				fig := strings.TrimSuffix(q.Figure, filepath.Ext(q.Figure))
@@ -132,6 +147,7 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string) ([]byte, error) {
 		Preamble:     strings.TrimSpace(e.Preamble),
 		NumQuestions: numQuestions,
 		Sections:     sections,
+		PrintAnswers: opts.PrintAnswers,
 	}
 
 	funcs := template.FuncMap{

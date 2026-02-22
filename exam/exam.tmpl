@@ -4,17 +4,24 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{graphicx}
+\usepackage{wasysym}
 \usepackage{xspace}
 
 \newcommand{\ExamCourse}{<<.CourseCode>>\xspace}
-\newcommand{\ExamTitle}{<<.Title>>\xspace}
+\newcommand{\ExamTitle}{<<.Title>><<if .PrintAnswers>> (Solutions)<<end>>\xspace}
 \newcommand{\ExamSemester}{<<.Semester>>\xspace}
 \newcommand{\ExamDuration}{<<.Duration>>\xspace}
 \newcommand{\ExamNumQuestions}{\numquestions\xspace}
 \newcommand{\ExamPoints}{\numpoints\xspace}
 
+\checkboxchar{$\bigcirc$}
+\checkedchar{$\CIRCLE$}
+
 <<- with .Preamble>>
 <<.>>
+<<- end>>
+<<- if .PrintAnswers>>
+\printanswers
 <<- end>>
 
 

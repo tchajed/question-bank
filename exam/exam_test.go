@@ -80,7 +80,7 @@ func TestRender(t *testing.T) {
 	bankDir, err := filepath.Abs("../testdata/bank")
 	require.NoError(t, err)
 
-	latex, err := e.Render(resolved, bankDir)
+	latex, err := e.Render(resolved, bankDir, exam.RenderOptions{})
 	require.NoError(t, err)
 
 	out := string(latex)
