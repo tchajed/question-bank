@@ -112,6 +112,9 @@ func Parse(data []byte) (*Question, error) {
 			{Text: "False", Correct: !*q.AnswerTF},
 		}
 	}
+	if q.Points == 0 {
+		q.Points = 1
+	}
 	return &q, nil
 }
 
