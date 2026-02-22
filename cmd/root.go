@@ -12,9 +12,9 @@ import (
 var bankDir string
 
 var rootCmd = &cobra.Command{
-	Use:   "qb",
+	Use:   "question-bank",
 	Short: "Manage a question bank",
-	Long:  `qb is a CLI tool for managing exam and quiz questions stored as TOML files.`,
+	Long:  `question-bank is a CLI tool for managing exam and quiz questions stored as TOML files.`,
 }
 
 func Execute() {
