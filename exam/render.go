@@ -111,15 +111,22 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 			if points == 0 {
 				points = 1
 			}
+			choices := make([]question.Choice, len(q.Choices))
+			for i, c := range q.Choices {
+				choices[i] = question.Choice{
+					Text:    markdownToTeX(c.Text),
+					Correct: c.Correct,
+				}
+			}
 			rq := &renderQuestion{
 				Id:           q.Id,
 				Topic:        q.Topic,
 				Difficulty:   string(q.Difficulty),
 				Points:       points,
-				Stem:         strings.TrimSpace(q.Stem),
+				Stem:         markdownToTeX(q.Stem),
 				Type:         string(q.Type),
-				Choices:      q.Choices,
-				Explanation:  strings.TrimSpace(q.Explanation),
+				Choices:      choices,
+				Explanation:  markdownToTeX(q.Explanation),
 				ShowMetadata: opts.ShowMetadata,
 			}
 			if q.Figure != "" {
