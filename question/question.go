@@ -3,7 +3,9 @@ package question
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -27,6 +29,17 @@ const (
 	MultipleChoice QuestionType = "multiple-choice"
 	TrueFalse      QuestionType = "true-false"
 )
+
+// Short returns an abbreviated form of the question type: "choice" or "tf".
+func (t QuestionType) Short() string {
+	if t == TrueFalse {
+		return "tf"
+	}
+	if t == MultipleChoice {
+		return "choice"
+	}
+	panic(fmt.Errorf("unhandled type: %s", t))
+}
 
 // Choice is one option in a multiple-choice question.
 type Choice struct {
@@ -102,6 +115,39 @@ func Parse(data []byte) (*Question, error) {
 		}
 	}
 	return &q, nil
+}
+
+// LoadBank reads all questions from a directory tree, returning a map indexed
+// by question ID. Files that fail to parse are collected and returned as a
+// combined error; successfully parsed questions are still returned.
+func LoadBank(dir string) (map[string]*Question, error) {
+	bank := make(map[string]*Question)
+	var errs []error
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			errs = append(errs, err)
+			return nil
+		}
+		if d.IsDir() || filepath.Ext(path) != ".toml" {
+			return nil
+		}
+		relPath, err := filepath.Rel(dir, path)
+		if err != nil {
+			errs = append(errs, err)
+			return nil
+		}
+		q, err := ParseFile(dir, relPath)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", relPath, err))
+			return nil
+		}
+		bank[q.Id] = q
+		return nil
+	})
+	if err != nil {
+		return bank, err
+	}
+	return bank, errors.Join(errs...)
 }
 
 // ParseFile reads and parses a Question from a TOML file.

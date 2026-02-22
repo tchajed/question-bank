@@ -10,7 +10,7 @@ import (
 )
 
 func TestParseFile(t *testing.T) {
-	q, err := question.ParseFile("../testdata", "vm-001.toml")
+	q, err := question.ParseFile("../testdata/bank", "vm-001.toml")
 	require.NoError(t, err)
 
 	assert.Equal(t, "vm-001", q.Id)
@@ -32,7 +32,7 @@ func TestParseFile(t *testing.T) {
 }
 
 func TestParseTrueFalse(t *testing.T) {
-	q, err := question.ParseFile("../testdata", "vm-002.toml")
+	q, err := question.ParseFile("../testdata/bank", "vm-002.toml")
 	require.NoError(t, err)
 
 	assert.Equal(t, question.TrueFalse, q.Type)
@@ -87,6 +87,16 @@ type = "multiple-choice"`,
 			}
 		})
 	}
+}
+
+func TestLoadBank(t *testing.T) {
+	bank, err := question.LoadBank("../testdata/bank")
+	require.NoError(t, err)
+
+	assert.Contains(t, bank, "os-001")
+	assert.Contains(t, bank, "vm-001")
+	assert.Contains(t, bank, "vm-002")
+	assert.Equal(t, "os-001", bank["os-001"].Id)
 }
 
 func TestTypeDefault(t *testing.T) {
