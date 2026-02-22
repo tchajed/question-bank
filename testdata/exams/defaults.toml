@@ -1,12 +1,13 @@
 course_code = "CS 537"
+semester = "Spring 2026"
 
 cover_page = '''
 \noindent
-{\Large\textbf{\ExamCourse{} \ExamTitle}}\\[5pt]
+{\Large\textbf{\ExamCourse: \ExamTitle}}\\[5pt]
 {\large \ExamSemester}\\[0.5cm]
 
 \noindent
-\ExamDuration{} / \ExamNumQuestions{} questions
+\ExamDuration{} / \ExamNumQuestions questions
 
 \paragraph{Instructions.} Fill your answers into your scantron sheet with a
 pencil. For True/False questions, fill in A for True and B for False. Please
