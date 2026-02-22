@@ -37,15 +37,20 @@ type Choice struct {
 //
 // For true-false questions, Answer holds the correct answer (nil = not set).
 type Question struct {
-	Topic      string       `toml:"topic"`
-	Difficulty Difficulty   `toml:"difficulty"`
-	Tags       []string     `toml:"tags"`
-	Type       QuestionType `toml:"type"`
-	Figure     string       `toml:"figure"`
+	Type QuestionType `toml:"type"`
+	// Topic helps categorize questions. Can be hierarchical, separated by '/'.
+	Topic string `toml:"topic"`
+	// Difficulty is easy/medium/hard
+	Difficulty Difficulty `toml:"difficulty"`
+	// Tags are keywords to categorize and find questions
+	Tags []string `toml:"tags"`
+	// (Optional) figure to include alongside question stem.
+	Figure string `toml:"figure"`
 	// Optional: treated as 1 if 0 or omitted
 	Points int `toml:"points"`
 	// Question prompt
-	Stem        string   `toml:"stem"`
+	Stem string `toml:"stem"`
+	// Explanation of correct answer for solutions
 	Explanation string   `toml:"explanation"`
 	Choices     []Choice `toml:"choices"`
 	// Answer for true-false questions
