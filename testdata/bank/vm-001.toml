@@ -3,6 +3,7 @@ A process uses a two-level page table. The page size is 4KB and each
 entry is 4 bytes. How many bytes of page table memory are required in
 the worst case for a process using 1GB of virtual address space?
 """
+figure = "figures/two-level-page-table.png"
 choices = [
   {text = "4MB", correct = true},
   {text = "8MB"},
@@ -16,5 +17,4 @@ topic = "virtual-memory/paging"
 type = "multiple-choice"
 difficulty = "medium"
 tags = ["page-table", "address-translation"]
-figure = "figures/two-level-page-table.svg"
 points = 2
