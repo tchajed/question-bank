@@ -4,6 +4,8 @@ package question
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 )
@@ -37,6 +39,8 @@ type Choice struct {
 //
 // For true-false questions, Answer holds the correct answer (nil = not set).
 type Question struct {
+	// Id is derived from the file path (relative path without extension).
+	Id   string       `toml:"-"`
 	Type QuestionType `toml:"type"`
 	// Topic helps categorize questions. Can be hierarchical, separated by '/'.
 	Topic string `toml:"topic"`
@@ -97,10 +101,20 @@ func Parse(data []byte) (*Question, error) {
 }
 
 // ParseFile reads and parses a Question from a TOML file.
-func ParseFile(path string) (*Question, error) {
-	data, err := os.ReadFile(path)
+//
+// baseDir is the root directory of the question bank, and relPath is the path
+// to the file relative to baseDir. The question's ID is set to relPath without
+// its file extension.
+func ParseFile(baseDir, relPath string) (*Question, error) {
+	data, err := os.ReadFile(filepath.Join(baseDir, relPath))
 	if err != nil {
 		return nil, err
 	}
-	return Parse(data)
+	q, err := Parse(data)
+	if err != nil {
+		return nil, err
+	}
+	ext := filepath.Ext(relPath)
+	q.Id = strings.TrimSuffix(relPath, ext)
+	return q, nil
 }

@@ -10,9 +10,10 @@ import (
 )
 
 func TestParseFile(t *testing.T) {
-	q, err := question.ParseFile("../testdata/vm-001.toml")
+	q, err := question.ParseFile("../testdata", "vm-001.toml")
 	require.NoError(t, err)
 
+	assert.Equal(t, "vm-001", q.Id)
 	assert.Equal(t, "virtual-memory/paging", q.Topic)
 	assert.Equal(t, question.DifficultyMedium, q.Difficulty)
 	assert.Equal(t, question.MultipleChoice, q.Type)
@@ -31,7 +32,7 @@ func TestParseFile(t *testing.T) {
 }
 
 func TestParseTrueFalse(t *testing.T) {
-	q, err := question.ParseFile("../testdata/vm-002.toml")
+	q, err := question.ParseFile("../testdata", "vm-002.toml")
 	require.NoError(t, err)
 
 	assert.Equal(t, question.TrueFalse, q.Type)
