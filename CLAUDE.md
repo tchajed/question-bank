@@ -16,3 +16,5 @@ Run the tests to validate your work.
 This is a Go library (`github.com/tchajed/question-bank`) for managing exam/quiz questions stored as TOML files.
 
 The question schema is in `./question/question.go` and the exam schema is in `./exam/exam.go`.
+
+There is a CLI implemented using spf13/cobra with subcommands in cmd/.
