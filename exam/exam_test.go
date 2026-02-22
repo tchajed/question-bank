@@ -56,7 +56,7 @@ func TestLoadWithDefaults(t *testing.T) {
 
 	// Fields from exam.toml
 	assert.Equal(t, "Midterm 1", e.Title)
-	assert.Equal(t, "SP 26", e.Semester)
+	assert.Equal(t, "Spring 2026", e.Semester)
 	assert.Equal(t, "75 minutes", e.Duration)
 
 	// Fields from defaults.toml
@@ -77,20 +77,18 @@ func TestRender(t *testing.T) {
 	resolved, err := e.Resolve(bank)
 	require.NoError(t, err)
 
-	examDir, err := filepath.Abs("../testdata/exams")
-	require.NoError(t, err)
 	bankDir, err := filepath.Abs("../testdata/bank")
 	require.NoError(t, err)
 
-	latex, err := e.Render(resolved, bankDir, examDir)
+	latex, err := e.Render(resolved, bankDir)
 	require.NoError(t, err)
 
 	out := string(latex)
 	assert.Contains(t, out, `\documentclass[12pt,addpoints]{exam}`)
-	assert.Contains(t, out, `\newcommand{\ExamCourse}{CS 537}`)
-	assert.Contains(t, out, `\newcommand{\ExamTitle}{Midterm 1}`)
-	assert.Contains(t, out, `\newcommand{\ExamSemester}{SP 26}`)
-	assert.Contains(t, out, `\newcommand{\ExamNumQuestions}{3}`)
+	assert.Contains(t, out, `\newcommand{\ExamCourse}{CS 537\xspace}`)
+	assert.Contains(t, out, `\newcommand{\ExamTitle}{Midterm 1\xspace}`)
+	assert.Contains(t, out, `\newcommand{\ExamSemester}{Spring 2026\xspace}`)
+	assert.Contains(t, out, `\newcommand{\ExamNumQuestions}{\numquestions\xspace}`)
 	assert.Contains(t, out, `\section*{Operating Systems}`)
 	assert.Contains(t, out, `\section*{Virtual Memory}`)
 	assert.Contains(t, out, `\question[1]`)
@@ -99,5 +97,5 @@ func TestRender(t *testing.T) {
 	assert.Contains(t, out, `\includegraphics`)
 	assert.Contains(t, out, `\ifprintanswers`)
 	assert.Contains(t, out, `\begin{coverpages}`)
-	assert.Contains(t, out, `\ExamCourse{} \ExamTitle`)
+	assert.Contains(t, out, `\ExamCourse: \ExamTitle`)
 }

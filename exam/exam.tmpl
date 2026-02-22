@@ -11,6 +11,7 @@
 \newcommand{\ExamSemester}{<<.Semester>>\xspace}
 \newcommand{\ExamDuration}{<<.Duration>>\xspace}
 \newcommand{\ExamNumQuestions}{\numquestions\xspace}
+\newcommand{\ExamPoints}{\numpoints\xspace}
 
 <<- with .Preamble>>
 <<.>>
@@ -27,7 +28,9 @@
 
 \begin{questions}
 <<range .Sections>>
+<<if .Name ->>
 \section*{<<.Name>>}
+<<- end>>
 
 <<range .Questions>><<renderQuestion .>>
 

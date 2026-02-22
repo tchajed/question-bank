@@ -7,7 +7,7 @@ cover_page = '''
 {\large \ExamSemester}\\[0.5cm]
 
 \noindent
-\ExamDuration{} / \ExamNumQuestions questions
+\ExamDuration{} / \ExamNumQuestions questions / \ExamPoints points
 
 \paragraph{Instructions.} Fill your answers into your scantron sheet with a
 pencil. For True/False questions, fill in A for True and B for False. Please
