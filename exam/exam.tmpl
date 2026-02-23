@@ -2,7 +2,10 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
+% better main font
 \usepackage{palatino}
+% better monospace font
+\usepackage{zi4}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{graphicx}
@@ -11,6 +14,22 @@
 \usepackage{xspace}
 \usepackage{siunitx}
 \usepackage{url}
+\usepackage{listings}
+\lstdefinelanguage{Go}{
+  morekeywords=[1]{break,default,func,interface,select,case,defer,go,map,
+    struct,chan,else,goto,package,switch,const,fallthrough,if,range,
+    return,type,continue,for,import,var},
+  sensitive=true,
+  morecomment=[l]{//},
+  morecomment=[s]{/*}{*/},
+  morestring=[b]",
+  morestring=[b]`,
+}
+
+\lstset{
+  basicstyle=\ttfamily,
+  columns=flexible
+}
 
 \usepackage{newunicodechar}
 \newunicodechar{≈}{\ensuremath{\approx}}

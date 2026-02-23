@@ -42,6 +42,31 @@ func TestMarkdownToTeX(t *testing.T) {
 			"Which of these is **not** an OS benefit?",
 			`Which of these is \textbf{not} an OS benefit?`,
 		},
+		{
+			"fenced code no language",
+			"```\nfoo bar\n```",
+			"\\begin{verbatim}\nfoo bar\n\\end{verbatim}",
+		},
+		{
+			"fenced code known language",
+			"```c\nint x = 0;\n```",
+			"\\begin{lstlisting}[language=C]\nint x = 0;\n\\end{lstlisting}",
+		},
+		{
+			"fenced code go",
+			"```go\nfunc main() {}\n```",
+			"\\begin{lstlisting}[language=Go]\nfunc main() {}\n\\end{lstlisting}",
+		},
+		{
+			"fenced code unknown language",
+			"```rust\nfn main() {}\n```",
+			"\\begin{verbatim}\nfn main() {}\n\\end{verbatim}",
+		},
+		{
+			"fenced code python alias",
+			"```py\nx = 1\n```",
+			"\\begin{lstlisting}[language=Python]\nx = 1\n\\end{lstlisting}",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

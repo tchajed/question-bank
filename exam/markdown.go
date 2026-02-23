@@ -82,12 +82,21 @@ func texWalk(buf *strings.Builder, src []byte, node ast.Node) {
 		buf.WriteString("}")
 
 	case *ast.FencedCodeBlock:
-		buf.WriteString("\\begin{verbatim}\n")
+		lang := listingsLanguage(string(n.Language(src)))
+		if lang != "" {
+			fmt.Fprintf(buf, "\\begin{lstlisting}[language=%s]\n", lang)
+		} else {
+			buf.WriteString("\\begin{verbatim}\n")
+		}
 		for i := 0; i < n.Lines().Len(); i++ {
 			line := n.Lines().At(i)
 			buf.WriteString(string(line.Value(src)))
 		}
-		buf.WriteString("\\end{verbatim}\n")
+		if lang != "" {
+			buf.WriteString("\\end{lstlisting}\n")
+		} else {
+			buf.WriteString("\\end{verbatim}\n")
+		}
 
 	case *ast.CodeBlock:
 		buf.WriteString("\\begin{verbatim}\n")
@@ -261,6 +270,51 @@ func escapeTeX(s string) string {
 		}
 	}
 	return b.String()
+}
+
+// listingsLanguage maps a markdown fenced code block language identifier to
+// its LaTeX listings package language name. Returns "" if the language is not
+// supported by listings (causing verbatim to be used instead).
+func listingsLanguage(info string) string {
+	lang := strings.ToLower(strings.TrimSpace(info))
+	switch lang {
+	case "c":
+		return "C"
+	case "c++", "cpp", "cxx":
+		return "C++"
+	case "python", "py":
+		return "Python"
+	case "java":
+		return "Java"
+	case "bash", "sh", "shell":
+		return "bash"
+	case "sql":
+		return "SQL"
+	case "haskell", "hs":
+		return "Haskell"
+	case "ocaml", "ml":
+		return "Caml"
+	case "perl", "pl":
+		return "Perl"
+	case "ruby", "rb":
+		return "Ruby"
+	case "html":
+		return "HTML"
+	case "xml":
+		return "XML"
+	case "lua":
+		return "Lua"
+	case "r":
+		return "R"
+	case "matlab":
+		return "Matlab"
+	case "go", "golang":
+		return "Go"
+	case "asm", "assembly", "x86", "x86-64", "nasm":
+		return "[x86masm]Assembler"
+	default:
+		return ""
+	}
 }
 
 // escapeCodeTeX escapes all LaTeX special characters including $ for code contexts.
