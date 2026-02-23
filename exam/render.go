@@ -185,7 +185,7 @@ func figurePath(figure, bankDir string) string {
 	return filepath.Join(bankDir, figure)
 }
 
-// replaceGroupRefs replaces GROUP:start and GROUP:end placeholders with the
+// replaceGroupRefs replaces GROUP:first and GROUP:last placeholders with the
 // group's actual label names (groupId+":first" and groupId+":last"). This lets
 // group markdown use symbolic names instead of repeating the group ID. If
 // groupId is empty the string is returned unchanged.
@@ -193,14 +193,14 @@ func replaceGroupRefs(s, groupId string) string {
 	if groupId == "" {
 		return s
 	}
-	s = strings.ReplaceAll(s, "GROUP:start", groupId+":first")
-	s = strings.ReplaceAll(s, "GROUP:end", groupId+":last")
+	s = strings.ReplaceAll(s, "GROUP:first", groupId+":first")
+	s = strings.ReplaceAll(s, "GROUP:last", groupId+":last")
 	return s
 }
 
 // buildRenderQuestion converts a question.Question to a renderQuestion.
 // bankDir is prepended to any figure path. showMetadata controls the visible
-// metadata annotation. groupId, when non-empty, enables GROUP:start/GROUP:end
+// metadata annotation. groupId, when non-empty, enables GROUP:first/GROUP:last
 // placeholder substitution in the question's markdown fields.
 func buildRenderQuestion(q *question.Question, bankDir string, showMetadata bool, groupId string) *renderQuestion {
 	choices := make([]question.Choice, len(q.Choices))
