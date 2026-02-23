@@ -109,7 +109,9 @@ func (g *renderGroup) renderTeX() string {
 	fmt.Fprintf(&sb, "%% %s | topic: %s | difficulty: %s\n", g.Id, g.Topic, g.Difficulty)
 	sb.WriteString("\\uplevel{\\vspace{1em}}\n")
 
-	sb.WriteString("\\uplevel{%\n")
+	// Use EnvUplevel (environment form) instead of \uplevel{} so that verbatim
+	// blocks in the stem are allowed.
+	sb.WriteString("\\begin{EnvUplevel}\n")
 	if g.ShowMetadata {
 		fmt.Fprintf(&sb, "{\\footnotesize\\textsf{%s \\textbar{} topic: %s \\textbar{} difficulty: %s}}\\\\[2pt]\n",
 			g.Id, g.Topic, g.Difficulty)
@@ -117,7 +119,7 @@ func (g *renderGroup) renderTeX() string {
 	sb.WriteString(g.Stem)
 	sb.WriteString("\n")
 	writeFigure(&sb, g.Figure)
-	sb.WriteString("}\n")
+	sb.WriteString("\\end{EnvUplevel}\n")
 
 	for _, part := range g.Parts {
 		sb.WriteString(part.renderTeX())
@@ -206,8 +208,7 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 					Parts:        make([]*renderQuestion, len(v.Parts)),
 				}
 				for j, part := range v.Parts {
-					// Parts don't repeat the group's metadata annotation.
-					rq := buildRenderQuestion(part, bankDir, false)
+					rq := buildRenderQuestion(part, bankDir, opts.ShowMetadata)
 					if j == 0 {
 						rq.Labels = append(rq.Labels, v.Id+":first")
 					}

@@ -1,11 +1,16 @@
 \documentclass[12pt,addpoints]{exam}
 
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage{palatino}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{graphicx}
+\usepackage{booktabs}
 \usepackage{wasysym}
 \usepackage{xspace}
+\usepackage{newunicodechar}
+\newunicodechar{≈}{\ensuremath{\approx}}
 
 \newcommand{\ExamCourse}{<<.CourseCode>>\xspace}
 \newcommand{\ExamTitle}{<<.Title>><<if .PrintAnswers>> (Solutions)<<end>>\xspace}
@@ -23,14 +28,14 @@
 \printanswers
 <<- end>>
 
-
 \begin{document}
 
 \header{\ExamCourse}{\ExamTitle}{\ExamSemester}
 \cfoot{Page \thepage}
 
 \begin{coverpages}
-<<.CoverPage ->>\end{coverpages}
+<<.CoverPage ->>
+\end{coverpages}
 
 \begin{questions}
 <<range .Sections>>

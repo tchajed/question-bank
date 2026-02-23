@@ -99,9 +99,11 @@ func TestRenderGroupShowMetadata(t *testing.T) {
 	require.NoError(t, err)
 
 	out := string(latex)
-	// Metadata appears in the uplevel block, not on individual parts
+	// Metadata appears in the uplevel block and on each part
 	assert.Contains(t, out, `\footnotesize`)
 	assert.Contains(t, out, "processes-group-001")
+	assert.Contains(t, out, "processes-group-001/1")
+	assert.Contains(t, out, "processes-group-001/2")
 }
 
 func TestRenderSmoke(t *testing.T) {

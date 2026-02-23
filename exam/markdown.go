@@ -1,10 +1,13 @@
 package exam
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/ast"
+	"github.com/yuin/goldmark/extension"
+	extast "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/text"
 )
 
@@ -19,7 +22,7 @@ func markdownToTeX(md string) string {
 	}
 	src := []byte(strings.TrimSpace(md))
 	reader := text.NewReader(src)
-	doc := goldmark.New().Parser().Parse(reader)
+	doc := goldmark.New(goldmark.WithExtensions(extension.Table)).Parser().Parse(reader)
 
 	var buf strings.Builder
 	texWalk(&buf, src, doc)
@@ -111,10 +114,61 @@ func texWalk(buf *strings.Builder, src []byte, node ast.Node) {
 		// Render link text only (URL is not useful in print)
 		texWalkChildren(buf, src, n)
 
+	case *extast.Table:
+		// Build column spec from header cells (booktabs: no vertical rules).
+		colSpec := ""
+		if header := n.FirstChild(); header != nil {
+			for cell := header.FirstChild(); cell != nil; cell = cell.NextSibling() {
+				if tc, ok := cell.(*extast.TableCell); ok {
+					switch tc.Alignment {
+					case extast.AlignRight:
+						colSpec += "r"
+					case extast.AlignCenter:
+						colSpec += "c"
+					default:
+						colSpec += "l"
+					}
+				}
+			}
+		}
+		fmt.Fprintf(buf, "\\begin{tabular}{%s}\n\\toprule\n", colSpec)
+		texWalkChildren(buf, src, n)
+		buf.WriteString("\\bottomrule\n\\end{tabular}\n\n")
+
+	case *extast.TableHeader:
+		writeTableRow(buf, src, n, true)
+		buf.WriteString("\\midrule\n")
+
+	case *extast.TableRow:
+		writeTableRow(buf, src, n, false)
+
+	case *extast.TableCell:
+		texWalkChildren(buf, src, n)
+
 	default:
 		// For unhandled node types, recurse into children
 		texWalkChildren(buf, src, n)
 	}
+}
+
+// writeTableRow renders a TableHeader or TableRow node as a LaTeX tabular row.
+// If bold is true, cell contents are wrapped in \textbf{}.
+func writeTableRow(buf *strings.Builder, src []byte, row ast.Node, bold bool) {
+	first := true
+	for cell := row.FirstChild(); cell != nil; cell = cell.NextSibling() {
+		if !first {
+			buf.WriteString(" & ")
+		}
+		first = false
+		if bold {
+			buf.WriteString(`\textbf{`)
+		}
+		texWalkChildren(buf, src, cell)
+		if bold {
+			buf.WriteString("}")
+		}
+	}
+	buf.WriteString(" \\\\\n")
 }
 
 // isLatexLetter reports whether r is a letter that can appear in a LaTeX
