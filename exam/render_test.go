@@ -126,9 +126,10 @@ func TestRenderTikzFigure(t *testing.T) {
 	require.NoError(t, err)
 
 	out := string(latex)
-	assert.Contains(t, out, `\input{`)
-	assert.Contains(t, out, "figures/tlb-diagram.tex")
+	assert.Contains(t, out, `\includestandalone{`)
+	assert.Contains(t, out, "figures/tlb-diagram")
 	assert.NotContains(t, out, `\includegraphics`)
+	assert.NotContains(t, out, `\input{`)
 }
 
 func TestRenderSmoke(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	_ "embed"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -39,15 +40,35 @@ type renderQuestion struct {
 	Labels       []string // \label{} names attached to this \question
 }
 
+// isStandaloneTexFile reports whether the .tex file at path uses
+// \documentclass{standalone} (possibly with options).
+func isStandaloneTexFile(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	defer f.Close()
+	buf := make([]byte, 128)
+	n, _ := f.Read(buf)
+	first := buf[:n]
+	return bytes.Contains(first, []byte(`\documentclass`)) &&
+		bytes.Contains(first, []byte(`{standalone}`))
+}
+
 // writeFigure writes a figure block to sb if figure is non-empty.
-// .tex figures (TikZ) are included with \input; all others use \includegraphics.
+// Standalone .tex figures use \includestandalone; other .tex files use \input;
+// all other files use \includegraphics.
 func writeFigure(sb *strings.Builder, figure string) {
 	if figure == "" {
 		return
 	}
 	sb.WriteString("\n\\begin{center}\n")
 	if strings.HasSuffix(figure, ".tex") {
-		fmt.Fprintf(sb, "  \\input{%s}\n", figure)
+		if isStandaloneTexFile(figure) {
+			fmt.Fprintf(sb, "  \\includestandalone{%s}\n", strings.TrimSuffix(figure, ".tex"))
+		} else {
+			fmt.Fprintf(sb, "  \\input{%s}\n", figure)
+		}
 	} else {
 		fmt.Fprintf(sb, "  \\includegraphics[width=0.5\\textwidth]{%s}\n", figure)
 	}
