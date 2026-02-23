@@ -179,14 +179,37 @@ func isLatexLetter(r rune) bool {
 
 // escapeTeX escapes LaTeX special characters in regular text.
 // Dollar signs are NOT escaped so that $...$ math passes through unchanged.
+// Inside math mode ($...$ or $$...$$), all characters pass through verbatim
+// so that constructs like $x^2$ or $x_i$ are not corrupted.
 // LaTeX commands (\name{arg}[opt]...) are passed through verbatim so that
 // constructs like \ref{label} survive the conversion.
 func escapeTeX(s string) string {
 	var b strings.Builder
 	runes := []rune(s)
 	i := 0
+	inMath := false
+	inDisplayMath := false
 	for i < len(runes) {
 		c := runes[i]
+		// Handle math mode delimiters first.
+		if c == '$' {
+			if i+1 < len(runes) && runes[i+1] == '$' {
+				inDisplayMath = !inDisplayMath
+				b.WriteString("$$")
+				i += 2
+				continue
+			}
+			inMath = !inMath
+			b.WriteRune('$')
+			i++
+			continue
+		}
+		// Inside math mode, pass everything through verbatim.
+		if inMath || inDisplayMath {
+			b.WriteRune(c)
+			i++
+			continue
+		}
 		if c == '\\' && i+1 < len(runes) && isLatexLetter(runes[i+1]) {
 			// LaTeX command: pass through \cmdname and any following {arg} or
 			// [opt] groups verbatim, handling nesting.
