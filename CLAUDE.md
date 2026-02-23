@@ -21,6 +21,8 @@ There is a CLI implemented using spf13/cobra with subcommands in cmd/.
 
 ## File format
 
+Use `docs/question-format.md` and `docs/exam-format.md` as your primary guides, and keep them up-to-date as the format changes.
+
 Read `testdata/bank/vm-001.toml` for an example of a question TOML file.
 
 Read `testdata/exams/exam.toml` for an example of an exam TOML file.
