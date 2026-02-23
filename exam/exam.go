@@ -146,12 +146,10 @@ func mergeGroupParts(items []question.BankItem, bank question.Bank) []question.B
 	i := 0
 	for i < len(items) {
 		q, ok := items[i].(*question.Question)
-		if !ok {
-			result = append(result, items[i])
-			i++
-			continue
+		groupID := ""
+		if ok {
+			groupID = groupIDOfPart(q.Id, bank)
 		}
-		groupID := groupIDOfPart(q.Id, bank)
 		if groupID == "" {
 			result = append(result, items[i])
 			i++

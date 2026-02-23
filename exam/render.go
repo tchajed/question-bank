@@ -39,6 +39,16 @@ type renderQuestion struct {
 	Labels       []string // \label{} names attached to this \question
 }
 
+// writeFigure writes an \includegraphics block to sb if figure is non-empty.
+func writeFigure(sb *strings.Builder, figure string) {
+	if figure == "" {
+		return
+	}
+	sb.WriteString("\n\\begin{center}\n")
+	fmt.Fprintf(sb, "  \\includegraphics[width=0.5\\textwidth]{%s}\n", figure)
+	sb.WriteString("\\end{center}\n")
+}
+
 func (q *renderQuestion) renderTeX() string {
 	var sb strings.Builder
 
@@ -58,11 +68,7 @@ func (q *renderQuestion) renderTeX() string {
 	sb.WriteString(q.Stem)
 	sb.WriteString("\n")
 
-	if q.Figure != "" {
-		sb.WriteString("\n\\begin{center}\n")
-		fmt.Fprintf(&sb, "  \\includegraphics[width=0.5\\textwidth]{%s}\n", q.Figure)
-		sb.WriteString("\\end{center}\n")
-	}
+	writeFigure(&sb, q.Figure)
 
 	choicesEnv := "choices"
 	if q.Type == string(question.TrueFalse) {
@@ -110,11 +116,7 @@ func (g *renderGroup) renderTeX() string {
 	}
 	sb.WriteString(g.Stem)
 	sb.WriteString("\n")
-	if g.Figure != "" {
-		sb.WriteString("\n\\begin{center}\n")
-		fmt.Fprintf(&sb, "  \\includegraphics[width=0.5\\textwidth]{%s}\n", g.Figure)
-		sb.WriteString("\\end{center}\n")
-	}
+	writeFigure(&sb, g.Figure)
 	sb.WriteString("}\n")
 
 	for _, part := range g.Parts {
@@ -148,6 +150,15 @@ type RenderOptions struct {
 	ShowMetadata bool
 }
 
+// figurePath strips the file extension from figure and prepends bankDir.
+// Returns "" if figure is "".
+func figurePath(figure, bankDir string) string {
+	if figure == "" {
+		return ""
+	}
+	return filepath.Join(bankDir, strings.TrimSuffix(figure, filepath.Ext(figure)))
+}
+
 // buildRenderQuestion converts a question.Question to a renderQuestion.
 // bankDir is prepended to any figure path. showMetadata controls the visible
 // metadata annotation.
@@ -159,7 +170,7 @@ func buildRenderQuestion(q *question.Question, bankDir string, showMetadata bool
 			Correct: c.Correct,
 		}
 	}
-	rq := &renderQuestion{
+	return &renderQuestion{
 		Id:           q.Id,
 		Topic:        q.Topic,
 		Difficulty:   string(q.Difficulty),
@@ -168,13 +179,9 @@ func buildRenderQuestion(q *question.Question, bankDir string, showMetadata bool
 		Type:         string(q.Type),
 		Choices:      choices,
 		Explanation:  markdownToTeX(q.Explanation),
+		Figure:       figurePath(q.Figure, bankDir),
 		ShowMetadata: showMetadata,
 	}
-	if q.Figure != "" {
-		fig := strings.TrimSuffix(q.Figure, filepath.Ext(q.Figure))
-		rq.Figure = filepath.Join(bankDir, fig)
-	}
-	return rq
 }
 
 // Render generates a LaTeX document for the exam. bankDir is used to compute
@@ -195,12 +202,9 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 					Topic:        v.Topic,
 					Difficulty:   string(v.Difficulty),
 					Stem:         markdownToTeX(v.Stem),
+					Figure:       figurePath(v.Figure, bankDir),
 					ShowMetadata: opts.ShowMetadata,
 					Parts:        make([]*renderQuestion, len(v.Parts)),
-				}
-				if v.Figure != "" {
-					fig := strings.TrimSuffix(v.Figure, filepath.Ext(v.Figure))
-					rg.Figure = filepath.Join(bankDir, fig)
 				}
 				for j, part := range v.Parts {
 					// Parts don't repeat the group's metadata annotation.
