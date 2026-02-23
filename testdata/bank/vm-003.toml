@@ -1,0 +1,27 @@
+stem = """
+The table below shows properties of two page-size configurations for a
+32-bit address space with 4-byte page table entries:
+
+| Page size (KB) | Offset bits | Pages | Page table (KB) |
+| -------------: | ----------: | ----: | --------------: |
+| 4              | 12          | 1M    | 4096            |
+| 4096           | 22          | 1K    | 4               |
+
+Which statement best describes the main trade-off between these two configurations?
+"""
+choices = [
+  {text = "4 KB pages reduce internal fragmentation but require a larger page table", correct = true},
+  {text = "4 MB pages reduce internal fragmentation and require a smaller page table"},
+  {text = "4 KB pages reduce internal fragmentation and require a smaller page table"},
+  {text = "4 MB pages increase internal fragmentation and require a larger page table"},
+]
+explanation = """
+Smaller pages waste less space within each page (less internal fragmentation) but
+need more entries in the page table, making it larger. Larger pages have the
+opposite trade-off: more potential waste per page, but far fewer entries so the
+page table itself is much smaller.
+"""
+
+topic = "virtual-memory/paging"
+difficulty = "medium"
+tags = ["page-table", "page-size", "internal-fragmentation"]

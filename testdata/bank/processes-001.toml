@@ -1,0 +1,31 @@
+stem = """
+What does the following program print?
+
+```c
+#include <stdio.h>
+#include <unistd.h>
+
+int main() {
+    int x = 1;
+    fork();
+    x++;
+    printf("%d\\n", x);
+    return 0;
+}
+```
+"""
+choices = [
+  {text = "Two lines, each printing `2`", correct = true},
+  {text = "One line, printing `2`"},
+  {text = "Two lines, printing `1` then `2`"},
+  {text = "Two lines, printing `2` then `3`"},
+]
+explanation = """
+`fork()` creates a child that is an exact copy of the parent. Both the parent
+and child resume after the `fork()` call, each with their own copy of `x = 1`.
+Both increment `x` to `2` and print it, producing two lines each showing `2`.
+"""
+
+topic = "processes/fork"
+difficulty = "easy"
+tags = ["fork", "processes", "output"]
