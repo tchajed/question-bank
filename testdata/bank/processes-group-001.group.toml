@@ -1,5 +1,5 @@
 stem = """
-For questions \\ref{processes-group-001:first}--\\ref{processes-group-001:last},
+For questions \\ref{GROUP:start}--\\ref{GROUP:end},
 consider this situation: A parent process calls fork(). Both the parent and
 child run to completion without any other system calls.
 """

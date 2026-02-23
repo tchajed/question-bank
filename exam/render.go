@@ -185,14 +185,28 @@ func figurePath(figure, bankDir string) string {
 	return filepath.Join(bankDir, figure)
 }
 
+// replaceGroupRefs replaces GROUP:start and GROUP:end placeholders with the
+// group's actual label names (groupId+":first" and groupId+":last"). This lets
+// group markdown use symbolic names instead of repeating the group ID. If
+// groupId is empty the string is returned unchanged.
+func replaceGroupRefs(s, groupId string) string {
+	if groupId == "" {
+		return s
+	}
+	s = strings.ReplaceAll(s, "GROUP:start", groupId+":first")
+	s = strings.ReplaceAll(s, "GROUP:end", groupId+":last")
+	return s
+}
+
 // buildRenderQuestion converts a question.Question to a renderQuestion.
 // bankDir is prepended to any figure path. showMetadata controls the visible
-// metadata annotation.
-func buildRenderQuestion(q *question.Question, bankDir string, showMetadata bool) *renderQuestion {
+// metadata annotation. groupId, when non-empty, enables GROUP:start/GROUP:end
+// placeholder substitution in the question's markdown fields.
+func buildRenderQuestion(q *question.Question, bankDir string, showMetadata bool, groupId string) *renderQuestion {
 	choices := make([]question.Choice, len(q.Choices))
 	for i, c := range q.Choices {
 		choices[i] = question.Choice{
-			Text:    markdownToTeX(c.Text),
+			Text:    markdownToTeX(replaceGroupRefs(c.Text, groupId)),
 			Correct: c.Correct,
 		}
 	}
@@ -201,10 +215,10 @@ func buildRenderQuestion(q *question.Question, bankDir string, showMetadata bool
 		Topic:        q.Topic,
 		Difficulty:   string(q.Difficulty),
 		Points:       q.Points,
-		Stem:         markdownToTeX(q.Stem),
+		Stem:         markdownToTeX(replaceGroupRefs(q.Stem, groupId)),
 		Type:         string(q.Type),
 		Choices:      choices,
-		Explanation:  markdownToTeX(q.Explanation),
+		Explanation:  markdownToTeX(replaceGroupRefs(q.Explanation, groupId)),
 		Figure:       figurePath(q.Figure, bankDir),
 		ShowMetadata: showMetadata,
 	}
@@ -220,20 +234,20 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 		for _, item := range sec.Items {
 			switch v := item.(type) {
 			case *question.Question:
-				items = append(items, buildRenderQuestion(v, bankDir, opts.ShowMetadata))
+				items = append(items, buildRenderQuestion(v, bankDir, opts.ShowMetadata, ""))
 				numQuestions++
 			case *question.QuestionGroup:
 				rg := &renderGroup{
 					Id:           v.Id,
 					Topic:        v.Topic,
 					Difficulty:   string(v.Difficulty),
-					Stem:         markdownToTeX(v.Stem),
+					Stem:         markdownToTeX(replaceGroupRefs(v.Stem, v.Id)),
 					Figure:       figurePath(v.Figure, bankDir),
 					ShowMetadata: opts.ShowMetadata,
 					Parts:        make([]*renderQuestion, len(v.Parts)),
 				}
 				for j, part := range v.Parts {
-					rq := buildRenderQuestion(part, bankDir, opts.ShowMetadata)
+					rq := buildRenderQuestion(part, bankDir, opts.ShowMetadata, v.Id)
 					if j == 0 {
 						rq.Labels = append(rq.Labels, v.Id+":first")
 					}

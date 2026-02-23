@@ -46,6 +46,11 @@ func TestRenderGroup(t *testing.T) {
 	// Labels for first and last question
 	assert.Contains(t, out, `\label{processes-group-001:first}`)
 	assert.Contains(t, out, `\label{processes-group-001:last}`)
+	// GROUP:start/end placeholders are replaced with actual label names
+	assert.Contains(t, out, `\ref{processes-group-001:first}`)
+	assert.Contains(t, out, `\ref{processes-group-001:last}`)
+	assert.NotContains(t, out, "GROUP:start")
+	assert.NotContains(t, out, "GROUP:end")
 }
 
 func TestRenderGroupPartSelection(t *testing.T) {
