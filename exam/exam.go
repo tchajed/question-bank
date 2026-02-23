@@ -32,10 +32,8 @@ type Exam struct {
 	Title string `toml:"title,omitempty"`
 	// Semester is the term, e.g. "SP 26".
 	Semester string `toml:"semester,omitempty"`
-	// Duration is the time allowed, e.g. "75 minutes".
-	Duration string `toml:"duration,omitempty"`
 	// CoverPage is freeform LaTeX for the body of the coverpages environment.
-	// It may reference \ExamCourse, \ExamTitle, \ExamSemester, \ExamDuration,
+	// It may reference \ExamCourse, \ExamTitle, \ExamSemester,
 	// and \ExamNumQuestions macros which are defined by the template.
 	CoverPage string `toml:"cover_page,omitempty"`
 	// Preamble is optional extra LaTeX inserted after the standard \usepackage lines.
@@ -55,9 +53,6 @@ func merge(base, override *Exam) *Exam {
 	}
 	if override.Semester != "" {
 		result.Semester = override.Semester
-	}
-	if override.Duration != "" {
-		result.Duration = override.Duration
 	}
 	if override.CoverPage != "" {
 		result.CoverPage = override.CoverPage

@@ -1,6 +1,5 @@
 title = "Midterm 1"
 semester = "Spring 2026"
-duration = "75 minutes"
 
 [[sections]]
 name = "Operating Systems"

@@ -82,7 +82,6 @@ func TestLoadWithDefaults(t *testing.T) {
 	// Fields from exam.toml
 	assert.Equal(t, "Midterm 1", e.Title)
 	assert.Equal(t, "Spring 2026", e.Semester)
-	assert.Equal(t, "75 minutes", e.Duration)
 
 	// Fields from defaults.toml
 	assert.Equal(t, "CS 537", e.CourseCode)

@@ -133,7 +133,6 @@ type RenderData struct {
 	CourseCode   string
 	Title        string
 	Semester     string
-	Duration     string
 	CoverPage    string
 	Preamble     string
 	NumQuestions int
@@ -234,7 +233,6 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 		CourseCode:   e.CourseCode,
 		Title:        e.Title,
 		Semester:     e.Semester,
-		Duration:     e.Duration,
 		CoverPage:    coverPage,
 		Preamble:     strings.TrimSpace(e.Preamble),
 		NumQuestions: numQuestions,
