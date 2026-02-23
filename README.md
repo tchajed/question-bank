@@ -1,5 +1,7 @@
 # question bank
 
+[![CI](https://github.com/tchajed/question-bank/actions/workflows/ci.yml/badge.svg)](https://github.com/tchajed/question-bank/actions/workflows/ci.yml)
+
 Write exam and quiz questions in a structured "question bank" format, then convert them to an exam or solutions sheet.
 
 Each question is a TOML file, a bank is a collection of TOML files, and each exam is a TOML file that references the questions in a bank. Exams are rendered to PDF by inserting the questions into a LaTeX template and compiling it.
