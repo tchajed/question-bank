@@ -35,7 +35,7 @@ difficulty = 'easy'
 tags = []
 ```
 
-Read [format-reference.md](docs/format-reference.md) for a complete guide.
+Read [question-\ormat.md](docs/question-reference.md) for a complete guide.
 
 ## Future work
 
