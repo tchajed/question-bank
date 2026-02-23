@@ -14,9 +14,15 @@ import (
 //go:embed exam.tmpl
 var examTemplate string
 
+// sectionItem is implemented by renderQuestion and renderGroup. Each produces
+// its own LaTeX output via renderTeX.
+type sectionItem interface {
+	renderTeX() string
+}
+
 type renderSection struct {
-	Name      string
-	Questions []*renderQuestion
+	Name  string
+	Items []sectionItem
 }
 
 type renderQuestion struct {
@@ -30,22 +36,10 @@ type renderQuestion struct {
 	Explanation  string
 	Figure       string // relative path for \includegraphics (no extension)
 	ShowMetadata bool
+	Labels       []string // \label{} names attached to this \question
 }
 
-// RenderData is the top-level data passed to the LaTeX template.
-type RenderData struct {
-	CourseCode   string
-	Title        string
-	Semester     string
-	Duration     string
-	CoverPage    string
-	Preamble     string
-	NumQuestions int
-	Sections     []renderSection
-	PrintAnswers bool
-}
-
-func renderQuestionTeX(q *renderQuestion) string {
+func (q *renderQuestion) renderTeX() string {
 	var sb strings.Builder
 
 	fmt.Fprintf(&sb, "%% %s | topic: %s | difficulty: %s", q.Id, q.Topic, q.Difficulty)
@@ -55,6 +49,9 @@ func renderQuestionTeX(q *renderQuestion) string {
 	sb.WriteString("\n")
 
 	fmt.Fprintf(&sb, "\\question[%d]\n", q.Points)
+	for _, label := range q.Labels {
+		fmt.Fprintf(&sb, "\\label{%s}\n", label)
+	}
 	if q.ShowMetadata {
 		fmt.Fprintf(&sb, "{\\footnotesize\\textsf{%s \\textbar{} topic: %s \\textbar{} difficulty: %s}}\\\\[2pt]\n", q.Id, q.Topic, q.Difficulty)
 	}
@@ -90,6 +87,58 @@ func renderQuestionTeX(q *renderQuestion) string {
 	return sb.String()
 }
 
+type renderGroup struct {
+	Id           string
+	Topic        string
+	Difficulty   string
+	Stem         string
+	Figure       string
+	ShowMetadata bool
+	Parts        []*renderQuestion
+}
+
+func (g *renderGroup) renderTeX() string {
+	var sb strings.Builder
+
+	fmt.Fprintf(&sb, "%% %s | topic: %s | difficulty: %s\n", g.Id, g.Topic, g.Difficulty)
+	sb.WriteString("\\uplevel{\\vspace{1em}}\n")
+
+	sb.WriteString("\\uplevel{%\n")
+	if g.ShowMetadata {
+		fmt.Fprintf(&sb, "{\\footnotesize\\textsf{%s \\textbar{} topic: %s \\textbar{} difficulty: %s}}\\\\[2pt]\n",
+			g.Id, g.Topic, g.Difficulty)
+	}
+	sb.WriteString(g.Stem)
+	sb.WriteString("\n")
+	if g.Figure != "" {
+		sb.WriteString("\n\\begin{center}\n")
+		fmt.Fprintf(&sb, "  \\includegraphics[width=0.5\\textwidth]{%s}\n", g.Figure)
+		sb.WriteString("\\end{center}\n")
+	}
+	sb.WriteString("}\n")
+
+	for _, part := range g.Parts {
+		sb.WriteString(part.renderTeX())
+		sb.WriteString("\n")
+	}
+	sb.WriteString("\\uplevel{\\vspace{1em}}\n")
+
+	return sb.String()
+}
+
+// RenderData is the top-level data passed to the LaTeX template.
+type RenderData struct {
+	CourseCode   string
+	Title        string
+	Semester     string
+	Duration     string
+	CoverPage    string
+	Preamble     string
+	NumQuestions int
+	Sections     []renderSection
+	PrintAnswers bool
+}
+
 // RenderOptions controls optional rendering behavior.
 type RenderOptions struct {
 	// PrintAnswers adds \printanswers to the document, revealing solutions.
@@ -99,44 +148,76 @@ type RenderOptions struct {
 	ShowMetadata bool
 }
 
+// buildRenderQuestion converts a question.Question to a renderQuestion.
+// bankDir is prepended to any figure path. showMetadata controls the visible
+// metadata annotation.
+func buildRenderQuestion(q *question.Question, bankDir string, showMetadata bool) *renderQuestion {
+	choices := make([]question.Choice, len(q.Choices))
+	for i, c := range q.Choices {
+		choices[i] = question.Choice{
+			Text:    markdownToTeX(c.Text),
+			Correct: c.Correct,
+		}
+	}
+	rq := &renderQuestion{
+		Id:           q.Id,
+		Topic:        q.Topic,
+		Difficulty:   string(q.Difficulty),
+		Points:       q.Points,
+		Stem:         markdownToTeX(q.Stem),
+		Type:         string(q.Type),
+		Choices:      choices,
+		Explanation:  markdownToTeX(q.Explanation),
+		ShowMetadata: showMetadata,
+	}
+	if q.Figure != "" {
+		fig := strings.TrimSuffix(q.Figure, filepath.Ext(q.Figure))
+		rq.Figure = filepath.Join(bankDir, fig)
+	}
+	return rq
+}
+
 // Render generates a LaTeX document for the exam. bankDir is used to compute
 // absolute figure paths.
 func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions) ([]byte, error) {
 	numQuestions := 0
 	sections := make([]renderSection, len(resolved.Sections))
 	for i, sec := range resolved.Sections {
-		qs := make([]*renderQuestion, len(sec.Questions))
-		for j, q := range sec.Questions {
-			points := q.Points
-			if points == 0 {
-				points = 1
-			}
-			choices := make([]question.Choice, len(q.Choices))
-			for i, c := range q.Choices {
-				choices[i] = question.Choice{
-					Text:    markdownToTeX(c.Text),
-					Correct: c.Correct,
+		var items []sectionItem
+		for _, item := range sec.Items {
+			switch v := item.(type) {
+			case *question.Question:
+				items = append(items, buildRenderQuestion(v, bankDir, opts.ShowMetadata))
+				numQuestions++
+			case *question.QuestionGroup:
+				rg := &renderGroup{
+					Id:           v.Id,
+					Topic:        v.Topic,
+					Difficulty:   string(v.Difficulty),
+					Stem:         markdownToTeX(v.Stem),
+					ShowMetadata: opts.ShowMetadata,
+					Parts:        make([]*renderQuestion, len(v.Parts)),
 				}
+				if v.Figure != "" {
+					fig := strings.TrimSuffix(v.Figure, filepath.Ext(v.Figure))
+					rg.Figure = filepath.Join(bankDir, fig)
+				}
+				for j, part := range v.Parts {
+					// Parts don't repeat the group's metadata annotation.
+					rq := buildRenderQuestion(part, bankDir, false)
+					if j == 0 {
+						rq.Labels = append(rq.Labels, v.Id+":first")
+					}
+					if j == len(v.Parts)-1 {
+						rq.Labels = append(rq.Labels, v.Id+":last")
+					}
+					rg.Parts[j] = rq
+					numQuestions++
+				}
+				items = append(items, rg)
 			}
-			rq := &renderQuestion{
-				Id:           q.Id,
-				Topic:        q.Topic,
-				Difficulty:   string(q.Difficulty),
-				Points:       points,
-				Stem:         markdownToTeX(q.Stem),
-				Type:         string(q.Type),
-				Choices:      choices,
-				Explanation:  markdownToTeX(q.Explanation),
-				ShowMetadata: opts.ShowMetadata,
-			}
-			if q.Figure != "" {
-				fig := strings.TrimSuffix(q.Figure, filepath.Ext(q.Figure))
-				rq.Figure = filepath.Join(bankDir, fig)
-			}
-			qs[j] = rq
-			numQuestions++
 		}
-		sections[i] = renderSection{Name: sec.Name, Questions: qs}
+		sections[i] = renderSection{Name: sec.Name, Items: items}
 	}
 
 	// Normalize CoverPage: ensure it ends with exactly one newline.
@@ -158,8 +239,8 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 	}
 
 	funcs := template.FuncMap{
-		"renderQuestion": func(q *renderQuestion) (string, error) {
-			return renderQuestionTeX(q), nil
+		"renderItem": func(item sectionItem) (string, error) {
+			return item.renderTeX(), nil
 		},
 	}
 

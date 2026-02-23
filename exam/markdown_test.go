@@ -22,6 +22,11 @@ func TestMarkdownToTeX(t *testing.T) {
 		{"code underscore", "`some_var`", `\texttt{some\_var}`},
 		{"code dollar", "`$var`", `\texttt{\$var}`},
 		{"mixed", "Use **bold** and `code`", `Use \textbf{bold} and \texttt{code}`},
+		{"latex command passthrough", `\ref{foo}`, `\ref{foo}`},
+		{"latex command with underscore in arg", `\ref{my-group:first}`, `\ref{my-group:first}`},
+		{"latex commands in sentence", `see questions \ref{g:first}--\ref{g:last}`, `see questions \ref{g:first}--\ref{g:last}`},
+		{"latex command nested braces", `\textbf{a {b} c}`, `\textbf{a {b} c}`},
+		{"bare backslash still escaped", `a \ b`, `a \textbackslash{} b`},
 		{"trim whitespace", "\n\ntext\n\n", "text"},
 		{
 			"multiline stem",

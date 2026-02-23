@@ -11,6 +11,99 @@ import (
 	"github.com/tchajed/question-bank/question"
 )
 
+func TestRenderGroup(t *testing.T) {
+	bank, err := question.LoadBank("../testdata/bank")
+	require.NoError(t, err)
+
+	e := &exam.Exam{
+		Sections: []exam.Section{
+			{
+				Name:      "Processes",
+				Questions: []string{"processes-group-001/1", "processes-group-001/2"},
+			},
+		},
+	}
+
+	resolved, err := e.Resolve(bank)
+	require.NoError(t, err)
+
+	bankDir, err := filepath.Abs("../testdata/bank")
+	require.NoError(t, err)
+
+	latex, err := e.Render(resolved, bankDir, exam.RenderOptions{})
+	require.NoError(t, err)
+
+	out := string(latex)
+	assert.Contains(t, out, `\uplevel{`)
+	assert.Contains(t, out, "fork()")          // group stem
+	assert.Contains(t, out, `\question[1]`)    // part 1
+	assert.Contains(t, out, `\question[2]`)    // part 2 (points = 2)
+	assert.Contains(t, out, `\CorrectChoice`)
+	assert.Contains(t, out, `\ifprintanswers`) // explanations present
+	// Group metadata in comment, not in visible text
+	assert.Contains(t, out, "% processes-group-001")
+	assert.NotContains(t, out, `\footnotesize`) // no metadata visible text by default
+	// Labels for first and last question
+	assert.Contains(t, out, `\label{processes-group-001:first}`)
+	assert.Contains(t, out, `\label{processes-group-001:last}`)
+}
+
+func TestRenderGroupPartSelection(t *testing.T) {
+	bank, err := question.LoadBank("../testdata/bank")
+	require.NoError(t, err)
+
+	e := &exam.Exam{
+		Sections: []exam.Section{
+			{
+				Name:      "Processes",
+				Questions: []string{"processes-group-001/1"},
+			},
+		},
+	}
+
+	resolved, err := e.Resolve(bank)
+	require.NoError(t, err)
+
+	bankDir, err := filepath.Abs("../testdata/bank")
+	require.NoError(t, err)
+
+	latex, err := e.Render(resolved, bankDir, exam.RenderOptions{})
+	require.NoError(t, err)
+
+	out := string(latex)
+	assert.Contains(t, out, `\uplevel{`)
+	// Only part 1 (1 point); part 2 (2 points) excluded
+	assert.Contains(t, out, `\question[1]`)
+	assert.NotContains(t, out, `\question[2]`)
+	// Single part gets both labels
+	assert.Contains(t, out, `\label{processes-group-001:first}`)
+	assert.Contains(t, out, `\label{processes-group-001:last}`)
+}
+
+func TestRenderGroupShowMetadata(t *testing.T) {
+	bank, err := question.LoadBank("../testdata/bank")
+	require.NoError(t, err)
+
+	e := &exam.Exam{
+		Sections: []exam.Section{
+			{Name: "P", Questions: []string{"processes-group-001/1", "processes-group-001/2"}},
+		},
+	}
+	resolved, err := e.Resolve(bank)
+	require.NoError(t, err)
+
+	bankDir, err := filepath.Abs("../testdata/bank")
+	require.NoError(t, err)
+
+	latex, err := e.Render(resolved, bankDir, exam.RenderOptions{ShowMetadata: true})
+	require.NoError(t, err)
+
+	out := string(latex)
+	// Metadata appears in the uplevel block, not on individual parts
+	assert.Contains(t, out, `\footnotesize`)
+	assert.Contains(t, out, "processes-group-001")
+}
+
 func TestRenderSmoke(t *testing.T) {
 	bank, err := question.LoadBank("../testdata/bank")
 	require.NoError(t, err)

@@ -1,0 +1,28 @@
+stem = """
+For questions \\ref{processes-group-001:first}--\\ref{processes-group-001:last},
+consider this situation: A parent process calls fork(). Both the parent and
+child run to completion without any other system calls.
+"""
+
+topic = "processes/fork"
+difficulty = "medium"
+tags = ["fork", "processes"]
+
+[[parts]]
+stem = "What does fork() return in the parent process?"
+choices = [
+  {text = "The PID of the child process", correct = true},
+  {text = "0"},
+  {text = "-1"},
+]
+explanation = "fork() returns the child's PID to the parent."
+
+[[parts]]
+stem = "What does fork() return in the child process?"
+choices = [
+  {text = "The PID of the parent process"},
+  {text = "0", correct = true},
+  {text = "The PID of the child process"},
+]
+explanation = "fork() returns 0 in the child."
+points = 2

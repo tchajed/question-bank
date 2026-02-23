@@ -22,8 +22,12 @@ var listCmd = &cobra.Command{
 		}
 		ids := slices.Sorted(maps.Keys(bank))
 		for _, id := range ids {
-			q := bank[id]
-			fmt.Fprintf(cmd.OutOrStdout(), "%-30s  %-6s  %-10s  %s\n", q.Id, q.Type.Short(), q.Difficulty, q.Topic)
+			switch item := bank[id].(type) {
+			case *question.Question:
+				fmt.Fprintf(cmd.OutOrStdout(), "%-30s  %-6s  %-10s  %s\n", item.Id, item.Type.Short(), item.Difficulty, item.Topic)
+			case *question.QuestionGroup:
+				fmt.Fprintf(cmd.OutOrStdout(), "%-30s  %-6s  %-10s  %s\n", item.Id, "group", item.Difficulty, item.Topic)
+			}
 		}
 		return nil
 	},

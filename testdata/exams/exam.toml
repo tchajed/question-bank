@@ -1,9 +1,10 @@
 title = "Midterm 1"
+semester = "Spring 2026"
 duration = "75 minutes"
 
 [[sections]]
 name = "Operating Systems"
-questions = ["os-001"]
+questions = ["os-001", "processes-group-001/1", "processes-group-001/2"]
 
 [[sections]]
 name = "Virtual Memory"

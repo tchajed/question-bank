@@ -16,7 +16,7 @@ func TestParseFile(t *testing.T) {
 
 	require.Len(t, e.Sections, 2)
 	assert.Equal(t, "Operating Systems", e.Sections[0].Name)
-	assert.Equal(t, []string{"os-001"}, e.Sections[0].Questions)
+	assert.Equal(t, []string{"os-001", "processes-group-001/1", "processes-group-001/2"}, e.Sections[0].Questions)
 	assert.Equal(t, "Virtual Memory", e.Sections[1].Name)
 	assert.Equal(t, []string{"vm-001", "vm-002"}, e.Sections[1].Questions)
 }
@@ -32,11 +32,18 @@ func TestResolve(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, resolved.Sections, 2)
-	require.Len(t, resolved.Sections[0].Questions, 1)
-	assert.Equal(t, "os-001", resolved.Sections[0].Questions[0].Id)
-	require.Len(t, resolved.Sections[1].Questions, 2)
-	assert.Equal(t, "vm-001", resolved.Sections[1].Questions[0].Id)
-	assert.Equal(t, "vm-002", resolved.Sections[1].Questions[1].Id)
+	// os-001 + the two group parts merged into one QuestionGroup
+	require.Len(t, resolved.Sections[0].Items, 2)
+	assert.Equal(t, "os-001", resolved.Sections[0].Items[0].GetId())
+	assert.Equal(t, "processes-group-001", resolved.Sections[0].Items[1].GetId())
+	// The merged group has both parts
+	g, ok := resolved.Sections[0].Items[1].(*question.QuestionGroup)
+	require.True(t, ok)
+	require.Len(t, g.Parts, 2)
+
+	require.Len(t, resolved.Sections[1].Items, 2)
+	assert.Equal(t, "vm-001", resolved.Sections[1].Items[0].GetId())
+	assert.Equal(t, "vm-002", resolved.Sections[1].Items[1].GetId())
 }
 
 func TestResolveMissingQuestion(t *testing.T) {
@@ -45,8 +52,27 @@ func TestResolveMissingQuestion(t *testing.T) {
 			{Name: "Test", Questions: []string{"nonexistent"}},
 		},
 	}
-	_, err := e.Resolve(map[string]*question.Question{})
+	_, err := e.Resolve(question.Bank{})
 	assert.ErrorContains(t, err, "nonexistent")
+}
+
+func TestResolvePartialGroup(t *testing.T) {
+	bank, err := question.LoadBank("../testdata/bank")
+	require.NoError(t, err)
+
+	e := &exam.Exam{
+		Sections: []exam.Section{
+			{Name: "P", Questions: []string{"processes-group-001/2"}},
+		},
+	}
+	resolved, err := e.Resolve(bank)
+	require.NoError(t, err)
+
+	require.Len(t, resolved.Sections[0].Items, 1)
+	g, ok := resolved.Sections[0].Items[0].(*question.QuestionGroup)
+	require.True(t, ok)
+	require.Len(t, g.Parts, 1)
+	assert.Equal(t, "processes-group-001/2", g.Parts[0].Id)
 }
 
 func TestLoadWithDefaults(t *testing.T) {

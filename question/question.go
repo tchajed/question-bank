@@ -88,16 +88,11 @@ func (q *Question) validate() error {
 	return nil
 }
 
-// Parse parses a Question from TOML-encoded bytes.
-func Parse(data []byte) (*Question, error) {
-	var q Question
-	dec := toml.NewDecoder(bytes.NewReader(data))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&q); err != nil {
-		return nil, err
-	}
+// postProcess validates and normalizes a decoded Question. It is called after
+// TOML decoding, and also after inheriting group metadata for group parts.
+func postProcess(q *Question) error {
 	if err := q.validate(); err != nil {
-		return nil, err
+		return err
 	}
 	if q.Type == "" {
 		if q.AnswerTF != nil {
@@ -115,21 +110,40 @@ func Parse(data []byte) (*Question, error) {
 	if q.Points == 0 {
 		q.Points = 1
 	}
+	return nil
+}
+
+// GetId returns the question's unique identifier.
+func (q *Question) GetId() string { return q.Id }
+
+// Parse parses a Question from TOML-encoded bytes.
+func Parse(data []byte) (*Question, error) {
+	var q Question
+	dec := toml.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&q); err != nil {
+		return nil, err
+	}
+	if err := postProcess(&q); err != nil {
+		return nil, err
+	}
 	return &q, nil
 }
 
-// LoadBank reads all questions from a directory tree, returning a map indexed
-// by question ID. Files that fail to parse are collected and returned as a
-// combined error; successfully parsed questions are still returned.
-func LoadBank(dir string) (map[string]*Question, error) {
-	bank := make(map[string]*Question)
+// LoadBank reads all questions and question groups from a directory tree,
+// returning a Bank indexed by ID. Files ending in .group.toml are parsed as
+// QuestionGroups; other .toml files are parsed as Questions. Files that fail
+// to parse are collected and returned as a combined error; successfully parsed
+// items are still returned.
+func LoadBank(dir string) (Bank, error) {
+	bank := make(Bank)
 	var errs []error
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			errs = append(errs, err)
 			return nil
 		}
-		if d.IsDir() || filepath.Ext(path) != ".toml" {
+		if d.IsDir() {
 			return nil
 		}
 		relPath, err := filepath.Rel(dir, path)
@@ -137,12 +151,24 @@ func LoadBank(dir string) (map[string]*Question, error) {
 			errs = append(errs, err)
 			return nil
 		}
-		q, err := ParseFile(dir, relPath)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", relPath, err))
-			return nil
+		if strings.HasSuffix(path, ".group.toml") {
+			g, err := ParseGroupFile(dir, relPath)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s: %w", relPath, err))
+				return nil
+			}
+			bank[g.Id] = g
+			for _, part := range g.Parts {
+				bank[part.Id] = part
+			}
+		} else if filepath.Ext(path) == ".toml" {
+			q, err := ParseFile(dir, relPath)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%s: %w", relPath, err))
+				return nil
+			}
+			bank[q.Id] = q
 		}
-		bank[q.Id] = q
 		return nil
 	})
 	if err != nil {

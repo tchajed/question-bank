@@ -117,32 +117,70 @@ func texWalk(buf *strings.Builder, src []byte, node ast.Node) {
 	}
 }
 
+// isLatexLetter reports whether r is a letter that can appear in a LaTeX
+// command name (a-z or A-Z).
+func isLatexLetter(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+}
+
 // escapeTeX escapes LaTeX special characters in regular text.
 // Dollar signs are NOT escaped so that $...$ math passes through unchanged.
+// LaTeX commands (\name{arg}[opt]...) are passed through verbatim so that
+// constructs like \ref{label} survive the conversion.
 func escapeTeX(s string) string {
 	var b strings.Builder
-	for _, c := range s {
-		switch c {
-		case '\\':
-			b.WriteString(`\textbackslash{}`)
-		case '&':
-			b.WriteString(`\&`)
-		case '%':
-			b.WriteString(`\%`)
-		case '#':
-			b.WriteString(`\#`)
-		case '_':
-			b.WriteString(`\_`)
-		case '{':
-			b.WriteString(`\{`)
-		case '}':
-			b.WriteString(`\}`)
-		case '~':
-			b.WriteString(`\~{}`)
-		case '^':
-			b.WriteString(`\^{}`)
-		default:
+	runes := []rune(s)
+	i := 0
+	for i < len(runes) {
+		c := runes[i]
+		if c == '\\' && i+1 < len(runes) && isLatexLetter(runes[i+1]) {
+			// LaTeX command: pass through \cmdname and any following {arg} or
+			// [opt] groups verbatim, handling nesting.
 			b.WriteRune(c)
+			i++
+			for i < len(runes) && isLatexLetter(runes[i]) {
+				b.WriteRune(runes[i])
+				i++
+			}
+			for i < len(runes) && (runes[i] == '{' || runes[i] == '[') {
+				open, close := runes[i], map[rune]rune{'{': '}', '[': ']'}[runes[i]]
+				b.WriteRune(runes[i])
+				i++
+				depth := 1
+				for i < len(runes) && depth > 0 {
+					if runes[i] == open {
+						depth++
+					} else if runes[i] == close {
+						depth--
+					}
+					b.WriteRune(runes[i])
+					i++
+				}
+			}
+		} else {
+			switch c {
+			case '\\':
+				b.WriteString(`\textbackslash{}`)
+			case '&':
+				b.WriteString(`\&`)
+			case '%':
+				b.WriteString(`\%`)
+			case '#':
+				b.WriteString(`\#`)
+			case '_':
+				b.WriteString(`\_`)
+			case '{':
+				b.WriteString(`\{`)
+			case '}':
+				b.WriteString(`\}`)
+			case '~':
+				b.WriteString(`\~{}`)
+			case '^':
+				b.WriteString(`\^{}`)
+			default:
+				b.WriteRune(c)
+			}
+			i++
 		}
 	}
 	return b.String()

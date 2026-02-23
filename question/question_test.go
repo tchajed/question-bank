@@ -96,7 +96,9 @@ func TestLoadBank(t *testing.T) {
 	assert.Contains(t, bank, "os-001")
 	assert.Contains(t, bank, "vm-001")
 	assert.Contains(t, bank, "vm-002")
-	assert.Equal(t, "os-001", bank["os-001"].Id)
+	q, ok := bank["os-001"].(*question.Question)
+	require.True(t, ok)
+	assert.Equal(t, "os-001", q.Id)
 }
 
 func TestTypeDefault(t *testing.T) {
