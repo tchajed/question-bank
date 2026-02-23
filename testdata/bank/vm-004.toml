@@ -1,0 +1,17 @@
+stem = """
+Consider the TLB diagram shown above.
+"""
+figure = "figures/tlb-diagram.tex"
+choices = [
+  {text = "The TLB is a cache for page table entries", correct = true},
+  {text = "The TLB is a cache for disk blocks"},
+]
+explanation = """
+A TLB (Translation Lookaside Buffer) caches page table entries to speed up
+address translation.
+"""
+
+topic = "virtual-memory/tlb"
+type = "multiple-choice"
+difficulty = "easy"
+tags = ["tlb"]

@@ -34,18 +34,23 @@ type renderQuestion struct {
 	Type         string
 	Choices      []question.Choice
 	Explanation  string
-	Figure       string // relative path for \includegraphics (no extension)
+	Figure       string // path to figure file (with extension)
 	ShowMetadata bool
 	Labels       []string // \label{} names attached to this \question
 }
 
-// writeFigure writes an \includegraphics block to sb if figure is non-empty.
+// writeFigure writes a figure block to sb if figure is non-empty.
+// .tex figures (TikZ) are included with \input; all others use \includegraphics.
 func writeFigure(sb *strings.Builder, figure string) {
 	if figure == "" {
 		return
 	}
 	sb.WriteString("\n\\begin{center}\n")
-	fmt.Fprintf(sb, "  \\includegraphics[width=0.5\\textwidth]{%s}\n", figure)
+	if strings.HasSuffix(figure, ".tex") {
+		fmt.Fprintf(sb, "  \\input{%s}\n", figure)
+	} else {
+		fmt.Fprintf(sb, "  \\includegraphics[width=0.5\\textwidth]{%s}\n", figure)
+	}
 	sb.WriteString("\\end{center}\n")
 }
 
@@ -151,13 +156,12 @@ type RenderOptions struct {
 	ShowMetadata bool
 }
 
-// figurePath strips the file extension from figure and prepends bankDir.
-// Returns "" if figure is "".
+// figurePath prepends bankDir to figure. Returns "" if figure is "".
 func figurePath(figure, bankDir string) string {
 	if figure == "" {
 		return ""
 	}
-	return filepath.Join(bankDir, strings.TrimSuffix(figure, filepath.Ext(figure)))
+	return filepath.Join(bankDir, figure)
 }
 
 // buildRenderQuestion converts a question.Question to a renderQuestion.

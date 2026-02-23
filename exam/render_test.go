@@ -106,6 +106,31 @@ func TestRenderGroupShowMetadata(t *testing.T) {
 	assert.Contains(t, out, "processes-group-001/2")
 }
 
+func TestRenderTikzFigure(t *testing.T) {
+	bank, err := question.LoadBank("../testdata/bank")
+	require.NoError(t, err)
+
+	e := &exam.Exam{
+		Sections: []exam.Section{
+			{Name: "VM", Questions: []string{"vm-004"}},
+		},
+	}
+
+	resolved, err := e.Resolve(bank)
+	require.NoError(t, err)
+
+	bankDir, err := filepath.Abs("../testdata/bank")
+	require.NoError(t, err)
+
+	latex, err := e.Render(resolved, bankDir, exam.RenderOptions{})
+	require.NoError(t, err)
+
+	out := string(latex)
+	assert.Contains(t, out, `\input{`)
+	assert.Contains(t, out, "figures/tlb-diagram.tex")
+	assert.NotContains(t, out, `\includegraphics`)
+}
+
 func TestRenderSmoke(t *testing.T) {
 	bank, err := question.LoadBank("../testdata/bank")
 	require.NoError(t, err)

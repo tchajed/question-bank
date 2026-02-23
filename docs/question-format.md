@@ -18,7 +18,7 @@ Each question is a single TOML file. The question's ID is the file path relative
 | `explanation` | no | Explanation of the correct answer, shown in solutions. |
 | `difficulty` | no | `"easy"`, `"medium"`, or `"hard"`. |
 | `tags` | no | Array of keyword strings for filtering. |
-| `figure` | no | Path to an image file to include alongside the stem. |
+| `figure` | no | Path to a figure file to include alongside the stem. Image files (`.png`, `.jpg`, etc.) are included with `\includegraphics`; `.tex` files are included with `\input` (for TikZ figures). |
 | `points` | no | Point value. Defaults to `1`. |
 
 ### Choices

@@ -1,0 +1,10 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
+\begin{document}
+\begin{tikzpicture}
+  \node[draw, rectangle, minimum width=2cm, minimum height=1cm] (tlb) {TLB};
+  \node[draw, rectangle, minimum width=2cm, minimum height=1cm, right=2cm of tlb] (pt) {Page Table};
+  \draw[->] (tlb) -- node[above] {miss} (pt);
+\end{tikzpicture}
+\end{document}
