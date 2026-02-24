@@ -13,6 +13,7 @@ import (
 )
 
 var trueFalse bool
+var shortAnswer bool
 
 var newCmd = &cobra.Command{
 	Use:   "new <file>",
@@ -41,6 +42,8 @@ var newCmd = &cobra.Command{
 		var data []byte
 		if trueFalse {
 			data, err = question.TrueFalseTemplate()
+		} else if shortAnswer {
+			data, err = question.ShortAnswerTemplate()
 		} else {
 			data, err = question.MultipleChoiceTemplate()
 		}
@@ -59,4 +62,5 @@ var newCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(newCmd)
 	newCmd.Flags().BoolVar(&trueFalse, "true-false", false, "create a true/false question template")
+	newCmd.Flags().BoolVar(&shortAnswer, "short-answer", false, "create a short-answer question template")
 }

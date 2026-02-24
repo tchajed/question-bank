@@ -34,6 +34,8 @@ type renderQuestion struct {
 	Stem         string
 	Type         string
 	Choices      []question.Choice
+	Answer       string // correct answer for short-answer questions
+	AnswerSpace  string // box size override for short-answer (e.g. "2in"); empty means \defaultanswerlen
 	Explanation  string
 	Figure       string // path to figure file (with extension)
 	ShowMetadata bool
@@ -96,24 +98,39 @@ func (q *renderQuestion) renderTeX() string {
 
 	writeFigure(&sb, q.Figure)
 
-	choicesEnv := "choices"
-	if q.Type == string(question.TrueFalse) {
-		choicesEnv = "checkboxes"
-	}
-	fmt.Fprintf(&sb, "\\begin{%s}\n", choicesEnv)
-	for _, c := range q.Choices {
-		if c.Correct {
-			fmt.Fprintf(&sb, "  \\CorrectChoice %s\n", c.Text)
-		} else {
-			fmt.Fprintf(&sb, "  \\choice %s\n", c.Text)
-		}
-	}
-	fmt.Fprintf(&sb, "\\end{%s}\n", choicesEnv)
-
-	if q.Explanation != "" {
+	if q.Type == string(question.ShortAnswer) {
 		sb.WriteString("\\ifprintanswers\n")
-		fmt.Fprintf(&sb, "\\textbf{Solution:} %s\n", q.Explanation)
+		fmt.Fprintf(&sb, "\\paragraph{Answer:}\\fbox{%s}\n", q.Answer)
+		if q.Explanation != "" {
+			fmt.Fprintf(&sb, "\\paragraph{Solution:}%s\n", q.Explanation)
+		}
+		sb.WriteString("\\else\n")
+		answerLen := q.AnswerSpace
+		if answerLen == "" {
+			answerLen = `\defaultanswerlen`
+		}
+		fmt.Fprintf(&sb, "\\makeemptybox{%s}\n", answerLen)
 		sb.WriteString("\\fi\n")
+	} else {
+		choicesEnv := "choices"
+		if q.Type == string(question.TrueFalse) {
+			choicesEnv = "checkboxes"
+		}
+		fmt.Fprintf(&sb, "\\begin{%s}\n", choicesEnv)
+		for _, c := range q.Choices {
+			if c.Correct {
+				fmt.Fprintf(&sb, "  \\CorrectChoice %s\n", c.Text)
+			} else {
+				fmt.Fprintf(&sb, "  \\choice %s\n", c.Text)
+			}
+		}
+		fmt.Fprintf(&sb, "\\end{%s}\n", choicesEnv)
+
+		if q.Explanation != "" {
+			sb.WriteString("\\ifprintanswers\n")
+			fmt.Fprintf(&sb, "\\textbf{Solution:} %s\n", q.Explanation)
+			sb.WriteString("\\fi\n")
+		}
 	}
 
 	return sb.String()
@@ -218,6 +235,8 @@ func buildRenderQuestion(q *question.Question, bankDir string, showMetadata bool
 		Stem:         markdownToTeX(replaceGroupRefs(q.Stem, groupId)),
 		Type:         string(q.Type),
 		Choices:      choices,
+		Answer:       markdownToTeX(replaceGroupRefs(q.Answer, groupId)),
+		AnswerSpace:  q.AnswerSpace,
 		Explanation:  markdownToTeX(replaceGroupRefs(q.Explanation, groupId)),
 		Figure:       figurePath(q.Figure, bankDir),
 		ShowMetadata: showMetadata,

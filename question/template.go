@@ -8,10 +8,12 @@ import (
 
 type questionTemplate struct {
 	Stem        string           `toml:"stem,multiline" comment:"Required. The question prompt."`
-	Type        string           `toml:"type" comment:"Question type: 'multiple-choice' (default) or 'true-false'"`
+	Type        string           `toml:"type" comment:"Question type: 'multiple-choice' (default), 'true-false', or 'short-answer'"`
 	Choices     []choiceTemplate `toml:"choices,omitempty,inline" comment:"Answer choices"`
 	Explanation string           `toml:"explanation,multiline" comment:"Explanation of the answer for solutions."`
 	AnswerTF    *bool            `toml:"answer_tf,omitempty" comment:"Correct answer for true/false"`
+	Answer      string           `toml:"answer,omitempty" comment:"Correct answer for short-answer questions"`
+	AnswerSpace string           `toml:"answer_space,omitempty,commented" comment:"Box size for the answer blank (e.g. \"2in\"); defaults to \\defaultanswerlen"`
 
 	// metadata:
 
@@ -65,5 +67,18 @@ func TrueFalseTemplate() ([]byte, error) {
 		Explanation: "\n",
 		Points:      1,
 		AnswerTF:    &f,
+	})
+}
+
+// ShortAnswerTemplate returns TOML bytes for a short-answer question template.
+func ShortAnswerTemplate() ([]byte, error) {
+	return encodeTemplate(questionTemplate{
+		Type:        "short-answer",
+		Difficulty:  "medium",
+		Tags:        []string{},
+		Stem:        "\n",
+		Answer:      "",
+		Explanation: "\n",
+		Points:      1,
 	})
 }

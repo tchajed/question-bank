@@ -14,7 +14,7 @@ An exam file references questions from the bank by ID and organizes them into se
 | `course_code` | no | Course identifier, e.g. `"CS 537"`. |
 | `semester` | no | Term, e.g. `"Spring 2026"`. |
 | `cover_page` | no | Freeform LaTeX for the cover page body. May use macros `\ExamCourse`, `\ExamTitle`, `\ExamSemester`, `\ExamNumQuestions`. |
-| `preamble` | no | Extra LaTeX inserted after standard `\usepackage` lines. |
+| `preamble` | no | Extra LaTeX inserted after standard `\usepackage` lines. Use `\renewcommand{\defaultanswerlen}{2in}` here to change the default blank-box height for short-answer questions (default: `1in`). |
 | `sections` | yes | Array of section tables. |
 
 ### Section fields

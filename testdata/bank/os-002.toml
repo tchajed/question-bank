@@ -1,0 +1,11 @@
+stem = """
+What system call does a process use to create a child process?
+"""
+answer = "fork()"
+explanation = """
+fork() creates a new process by duplicating the calling process.
+"""
+
+topic = "operating-systems/processes"
+difficulty = "easy"
+tags = ["system-calls", "fork"]

@@ -12,9 +12,11 @@ Each question is a single TOML file. The question's ID is the file path relative
 |---|---|---|
 | `stem` | yes | The question prompt. Supports Markdown and LaTeX. |
 | `topic` | yes | Hierarchical category string, segments separated by `/` (e.g., `virtual-memory/paging`). |
-| `type` | no | `"multiple-choice"` or `"true-false"`. Inferred from other fields if omitted. |
+| `type` | no | `"multiple-choice"`, `"true-false"`, or `"short-answer"`. Inferred from other fields if omitted. |
 | `choices` | for multiple-choice | Array of answer choices. |
 | `answer_tf` | for true-false | Boolean answer (`true` or `false`). Setting this also sets `type = "true-false"`. |
+| `answer` | for short-answer | The correct answer string. Setting this also sets `type = "short-answer"`. |
+| `answer_space` | no | Height of the answer blank box for short-answer questions (e.g. `"2in"`). Defaults to the `\defaultanswerlen` macro (`1in`; overridable per-exam via `\renewcommand` in the exam's `preamble`). |
 | `explanation` | no | Explanation of the correct answer, shown in solutions. |
 | `difficulty` | no | `"easy"`, `"medium"`, or `"hard"`. |
 | `tags` | no | Array of keyword strings for filtering. |
@@ -71,6 +73,22 @@ difficulty = "easy"
 tags = ["tlb"]
 ```
 
+### Short-answer example
+
+```toml
+stem = """
+What system call does a process use to create a child process?
+"""
+answer = "fork()"
+explanation = """
+fork() creates a new process by duplicating the calling process.
+"""
+
+topic = "processes"
+difficulty = "easy"
+tags = ["system-calls", "fork"]
+```
+
 ### Stem formatting
 
 The stem is rendered as Markdown/LaTeX. You can include:
@@ -99,7 +117,7 @@ The group's ID is the file path without `.group.toml`. Each part gets ID `group-
 
 ### Part fields
 
-Each `[[parts]]` entry accepts the same fields as a standalone question (`stem`, `choices`, `answer_tf`, `explanation`, `type`, `difficulty`, `tags`, `points`). Parts inherit `topic`, `difficulty`, and `tags` from the group when not explicitly set.
+Each `[[parts]]` entry accepts the same fields as a standalone question (`stem`, `choices`, `answer_tf`, `answer`, `explanation`, `type`, `difficulty`, `tags`, `points`). Parts inherit `topic`, `difficulty`, and `tags` from the group when not explicitly set.
 
 ### Group example
 
