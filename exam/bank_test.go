@@ -18,6 +18,6 @@ func TestBankAsExam(t *testing.T) {
 	resolved, err := e.Resolve(bank)
 	require.NoError(t, err)
 
-	// os-001, processes-001, processes-group-001 (with 2 parts), vm-001, vm-002, vm-003, vm-004
-	assert.Len(t, resolved.Sections[0].Items, 7)
+	// os-001, os-002, processes-001, processes-group-001 (with 2 parts), vm-001, vm-002, vm-003, vm-004
+	assert.Len(t, resolved.Sections[0].Items, 8)
 }

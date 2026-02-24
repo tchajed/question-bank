@@ -28,15 +28,19 @@ type QuestionType string
 const (
 	MultipleChoice QuestionType = "multiple-choice"
 	TrueFalse      QuestionType = "true-false"
+	ShortAnswer    QuestionType = "short-answer"
 )
 
-// Short returns an abbreviated form of the question type: "choice" or "tf".
+// Short returns an abbreviated form of the question type: "choice", "tf", or "short".
 func (t QuestionType) Short() string {
 	if t == TrueFalse {
 		return "tf"
 	}
 	if t == MultipleChoice {
 		return "choice"
+	}
+	if t == ShortAnswer {
+		return "short"
 	}
 	panic(fmt.Errorf("unhandled type: %s", t))
 }
@@ -61,6 +65,8 @@ type Question struct {
 	Explanation string `toml:"explanation"`
 	// Answer for true-false questions
 	AnswerTF *bool `toml:"answer_tf,omitempty"`
+	// Answer for short-answer questions
+	Answer string `toml:"answer,omitempty"`
 
 	// Topic helps categorize questions. Can be hierarchical, separated by '/'.
 	Topic string `toml:"topic"`
@@ -85,6 +91,9 @@ func (q *Question) validate() error {
 	if q.Type == TrueFalse && q.AnswerTF == nil {
 		return fmt.Errorf("true-false question missing required field: answer")
 	}
+	if q.Type == ShortAnswer && q.Answer == "" {
+		return fmt.Errorf("short-answer question missing required field: answer")
+	}
 	return nil
 }
 
@@ -97,6 +106,8 @@ func postProcess(q *Question) error {
 	if q.Type == "" {
 		if q.AnswerTF != nil {
 			q.Type = TrueFalse
+		} else if q.Answer != "" {
+			q.Type = ShortAnswer
 		} else {
 			q.Type = MultipleChoice
 		}

@@ -78,8 +78,12 @@ var answerKeyCmd = &cobra.Command{
 	},
 }
 
-// answerLetter returns the answer letter (A, B, C, ...) for a question.
+// answerLetter returns the answer letter (A, B, C, ...) for a question, or the
+// answer string directly for short-answer questions.
 func answerLetter(q *question.Question) (string, error) {
+	if q.Type == question.ShortAnswer {
+		return q.Answer, nil
+	}
 	for i, c := range q.Choices {
 		if c.Correct {
 			return string(rune('A' + i)), nil
