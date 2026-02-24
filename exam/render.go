@@ -100,9 +100,9 @@ func (q *renderQuestion) renderTeX() string {
 
 	if q.Type == string(question.ShortAnswer) {
 		sb.WriteString("\\ifprintanswers\n")
-		fmt.Fprintf(&sb, "\\textbf{Answer:} %s\n", q.Answer)
+		fmt.Fprintf(&sb, "\\paragraph{Answer:}\\fbox{%s}\n", q.Answer)
 		if q.Explanation != "" {
-			fmt.Fprintf(&sb, "\\textbf{Solution:} %s\n", q.Explanation)
+			fmt.Fprintf(&sb, "\\paragraph{Solution:}%s\n", q.Explanation)
 		}
 		sb.WriteString("\\else\n")
 		answerLen := q.AnswerSpace
