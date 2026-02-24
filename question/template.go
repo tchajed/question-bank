@@ -13,6 +13,7 @@ type questionTemplate struct {
 	Explanation string           `toml:"explanation,multiline" comment:"Explanation of the answer for solutions."`
 	AnswerTF    *bool            `toml:"answer_tf,omitempty" comment:"Correct answer for true/false"`
 	Answer      string           `toml:"answer,omitempty" comment:"Correct answer for short-answer questions"`
+	AnswerSpace string           `toml:"answer_space,omitempty,commented" comment:"Box size for the answer blank (e.g. \"2in\"); defaults to \\defaultanswerlen"`
 
 	// metadata:
 

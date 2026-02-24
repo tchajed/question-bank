@@ -35,6 +35,7 @@ type renderQuestion struct {
 	Type         string
 	Choices      []question.Choice
 	Answer       string // correct answer for short-answer questions
+	AnswerSpace  string // box size override for short-answer (e.g. "2in"); empty means \defaultanswerlen
 	Explanation  string
 	Figure       string // path to figure file (with extension)
 	ShowMetadata bool
@@ -104,7 +105,11 @@ func (q *renderQuestion) renderTeX() string {
 			fmt.Fprintf(&sb, "\\textbf{Solution:} %s\n", q.Explanation)
 		}
 		sb.WriteString("\\else\n")
-		sb.WriteString("\\answerline\n")
+		answerLen := q.AnswerSpace
+		if answerLen == "" {
+			answerLen = `\defaultanswerlen`
+		}
+		fmt.Fprintf(&sb, "\\makeemptybox{%s}\n", answerLen)
 		sb.WriteString("\\fi\n")
 	} else {
 		choicesEnv := "choices"
@@ -231,6 +236,7 @@ func buildRenderQuestion(q *question.Question, bankDir string, showMetadata bool
 		Type:         string(q.Type),
 		Choices:      choices,
 		Answer:       markdownToTeX(replaceGroupRefs(q.Answer, groupId)),
+		AnswerSpace:  q.AnswerSpace,
 		Explanation:  markdownToTeX(replaceGroupRefs(q.Explanation, groupId)),
 		Figure:       figurePath(q.Figure, bankDir),
 		ShowMetadata: showMetadata,

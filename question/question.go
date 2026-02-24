@@ -67,6 +67,9 @@ type Question struct {
 	AnswerTF *bool `toml:"answer_tf,omitempty"`
 	// Answer for short-answer questions
 	Answer string `toml:"answer,omitempty"`
+	// AnswerSpace overrides the blank box size for short-answer questions (e.g. "2in").
+	// When empty, the LaTeX \defaultanswerlen macro is used.
+	AnswerSpace string `toml:"answer_space,omitempty"`
 
 	// Topic helps categorize questions. Can be hierarchical, separated by '/'.
 	Topic string `toml:"topic"`

@@ -16,6 +16,7 @@ Each question is a single TOML file. The question's ID is the file path relative
 | `choices` | for multiple-choice | Array of answer choices. |
 | `answer_tf` | for true-false | Boolean answer (`true` or `false`). Setting this also sets `type = "true-false"`. |
 | `answer` | for short-answer | The correct answer string. Setting this also sets `type = "short-answer"`. |
+| `answer_space` | no | Height of the answer blank box for short-answer questions (e.g. `"2in"`). Defaults to the `\defaultanswerlen` macro (`1in`; overridable per-exam via `\renewcommand` in the exam's `preamble`). |
 | `explanation` | no | Explanation of the correct answer, shown in solutions. |
 | `difficulty` | no | `"easy"`, `"medium"`, or `"hard"`. |
 | `tags` | no | Array of keyword strings for filtering. |
