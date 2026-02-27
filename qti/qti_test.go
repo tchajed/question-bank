@@ -10,8 +10,10 @@ import (
 )
 
 func TestParseZip(t *testing.T) {
-	quiz, err := qti.ParseZip("testdata/cs537-quiz.zip")
+	quizzes, err := qti.ParseZip("testdata/cs537-quiz.zip")
 	require.NoError(t, err)
+	require.Len(t, quizzes, 1)
+	quiz := quizzes[0]
 
 	// Assessment metadata
 	assert.Equal(t, "Test quiz", quiz.Meta.Title)
@@ -48,8 +50,10 @@ func TestParseZip(t *testing.T) {
 }
 
 func TestItemFeedback(t *testing.T) {
-	quiz, err := qti.ParseZip("testdata/cs537-quiz.zip")
+	quizzes, err := qti.ParseZip("testdata/cs537-quiz.zip")
 	require.NoError(t, err)
+	require.Len(t, quizzes, 1)
+	quiz := quizzes[0]
 
 	// Item 0 has 3 feedback entries
 	item0 := quiz.Assessment.Root.Items[0]
@@ -126,8 +130,10 @@ func TestWriteZip(t *testing.T) {
 	err = qti.WriteZip(f.Name(), cs537Quiz())
 	require.NoError(t, err)
 
-	quiz, err := qti.ParseZip(f.Name())
+	quizzes, err := qti.ParseZip(f.Name())
 	require.NoError(t, err)
+	require.Len(t, quizzes, 1)
+	quiz := quizzes[0]
 
 	// Metadata
 	assert.Equal(t, "Test quiz", quiz.Meta.Title)
@@ -222,8 +228,10 @@ func TestWriteZip(t *testing.T) {
 }
 
 func TestCorrectAnswers(t *testing.T) {
-	quiz, err := qti.ParseZip("testdata/cs537-quiz.zip")
+	quizzes, err := qti.ParseZip("testdata/cs537-quiz.zip")
 	require.NoError(t, err)
+	require.Len(t, quizzes, 1)
+	quiz := quizzes[0]
 
 	// Item 0 (true/false): correct answer is "8205" (True)
 	item0 := quiz.Assessment.Root.Items[0]
@@ -251,4 +259,43 @@ func TestCorrectAnswers(t *testing.T) {
 	require.NotNil(t, correctCond.ConditionVar.And)
 	assert.Len(t, correctCond.ConditionVar.And.VarEquals, 2)
 	assert.Len(t, correctCond.ConditionVar.And.Nots, 1)
+}
+
+func TestWriteZipMultiple(t *testing.T) {
+	f, err := os.CreateTemp("", "quiz-multi-*.zip")
+	require.NoError(t, err)
+	f.Close()
+	defer os.Remove(f.Name())
+
+	quiz1 := cs537Quiz()
+	quiz2 := &qti.NewQuiz{
+		Title:           "Second quiz",
+		PointsPossible:  1.0,
+		AllowedAttempts: 1,
+		QuizType:        "assignment",
+		Items: []qti.NewItem{
+			{
+				Title:  "Q1",
+				Type:   qti.TrueFalseQuestion,
+				Points: 1.0,
+				Choices: []qti.NewChoice{
+					{Text: "True", Correct: true},
+					{Text: "False"},
+				},
+			},
+		},
+	}
+
+	err = qti.WriteZip(f.Name(), quiz1, quiz2)
+	require.NoError(t, err)
+
+	quizzes, err := qti.ParseZip(f.Name())
+	require.NoError(t, err)
+	require.Len(t, quizzes, 2)
+
+	assert.Equal(t, "Test quiz", quizzes[0].Meta.Title)
+	assert.Len(t, quizzes[0].Assessment.Root.Items, 3)
+
+	assert.Equal(t, "Second quiz", quizzes[1].Meta.Title)
+	assert.Len(t, quizzes[1].Assessment.Root.Items, 1)
 }

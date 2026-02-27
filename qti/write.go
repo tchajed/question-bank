@@ -62,8 +62,13 @@ type NewQuiz struct {
 	Items    []NewItem
 }
 
-// WriteZip creates a Canvas QTI zip file at path from quiz.
-func WriteZip(path string, quiz *NewQuiz) (err error) {
+// WriteZip creates a Canvas QTI zip file at path containing all provided quizzes.
+// At least one quiz must be provided.
+func WriteZip(path string, quizzes ...*NewQuiz) (err error) {
+	if len(quizzes) == 0 {
+		return fmt.Errorf("WriteZip: at least one quiz required")
+	}
+
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -81,14 +86,22 @@ func WriteZip(path string, quiz *NewQuiz) (err error) {
 		}
 	}()
 
-	quizID := quiz.ID
-	if quizID == "" {
-		quizID = generateID()
+	// Assign IDs and build per-quiz data.
+	entries := make([]quizEntry, len(quizzes))
+	for i, quiz := range quizzes {
+		quizID := quiz.ID
+		if quizID == "" {
+			quizID = generateID()
+		}
+		entries[i] = quizEntry{
+			quizID: quizID,
+			metaID: generateID(),
+			dir:    quizID + "/",
+			quiz:   quiz,
+		}
 	}
-	metaID := generateID()
-	dir := quizID + "/"
 
-	manifestXML, err := marshalXML(buildManifest(quizID, metaID, dir))
+	manifestXML, err := marshalXML(buildManifest(entries))
 	if err != nil {
 		return fmt.Errorf("build manifest: %w", err)
 	}
@@ -96,20 +109,22 @@ func WriteZip(path string, quiz *NewQuiz) (err error) {
 		return fmt.Errorf("write manifest: %w", err)
 	}
 
-	metaXML, err := marshalXML(buildMeta(quizID, quiz))
-	if err != nil {
-		return fmt.Errorf("build assessment_meta: %w", err)
-	}
-	if err := writeZipEntry(w, dir+"assessment_meta.xml", metaXML); err != nil {
-		return fmt.Errorf("write assessment_meta: %w", err)
-	}
+	for _, e := range entries {
+		metaXML, err := marshalXML(buildMeta(e.quizID, e.quiz))
+		if err != nil {
+			return fmt.Errorf("build assessment_meta for %s: %w", e.quizID, err)
+		}
+		if err := writeZipEntry(w, e.dir+"assessment_meta.xml", metaXML); err != nil {
+			return fmt.Errorf("write assessment_meta for %s: %w", e.quizID, err)
+		}
 
-	assessXML, err := marshalXML(buildAssessment(quizID, quiz))
-	if err != nil {
-		return fmt.Errorf("build assessment XML: %w", err)
-	}
-	if err := writeZipEntry(w, dir+quizID+".xml", assessXML); err != nil {
-		return fmt.Errorf("write assessment XML: %w", err)
+		assessXML, err := marshalXML(buildAssessment(e.quizID, e.quiz))
+		if err != nil {
+			return fmt.Errorf("build assessment XML for %s: %w", e.quizID, err)
+		}
+		if err := writeZipEntry(w, e.dir+e.quizID+".xml", assessXML); err != nil {
+			return fmt.Errorf("write assessment XML for %s: %w", e.quizID, err)
+		}
 	}
 
 	return nil
@@ -143,25 +158,34 @@ type wDependency struct {
 	IdentifierRef string `xml:"identifierref,attr"`
 }
 
-func buildManifest(quizID, metaID, dir string) wManifest {
+type quizEntry struct {
+	quizID string
+	metaID string
+	dir    string
+	quiz   *NewQuiz
+}
+
+func buildManifest(entries []quizEntry) wManifest {
+	var resources []wManifestResource
+	for _, e := range entries {
+		resources = append(resources,
+			wManifestResource{
+				Identifier: e.quizID,
+				Type:       "imsqti_xmlv1p2",
+				Files:      []wResFile{{Href: e.dir + e.quizID + ".xml"}},
+				Dependency: &wDependency{IdentifierRef: e.metaID},
+			},
+			wManifestResource{
+				Identifier: e.metaID,
+				Type:       "associatedcontent/imscc_xmlv1p1/learning-application-resource",
+				Href:       e.dir + "assessment_meta.xml",
+				Files:      []wResFile{{Href: e.dir + "assessment_meta.xml"}},
+			},
+		)
+	}
 	return wManifest{
 		Identifier: generateID(),
-		Resources: wManifestResources{
-			Resources: []wManifestResource{
-				{
-					Identifier: quizID,
-					Type:       "imsqti_xmlv1p2",
-					Files:      []wResFile{{Href: dir + quizID + ".xml"}},
-					Dependency: &wDependency{IdentifierRef: metaID},
-				},
-				{
-					Identifier: metaID,
-					Type:       "associatedcontent/imscc_xmlv1p1/learning-application-resource",
-					Href:       dir + "assessment_meta.xml",
-					Files:      []wResFile{{Href: dir + "assessment_meta.xml"}},
-				},
-			},
-		},
+		Resources:  wManifestResources{Resources: resources},
 	}
 }
 

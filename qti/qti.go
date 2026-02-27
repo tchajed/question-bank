@@ -11,7 +11,6 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"strings"
 )
 
 // Manifest is the top-level IMS Content Package manifest (imsmanifest.xml).
@@ -28,6 +27,12 @@ type ManifestResource struct {
 	Files      []struct {
 		Href string `xml:"href,attr"`
 	} `xml:"file"`
+	Dependency *ManifestDependency `xml:"dependency"`
+}
+
+// ManifestDependency is the dependency element in a manifest resource.
+type ManifestDependency struct {
+	IdentifierRef string `xml:"identifierref,attr"`
 }
 
 // AssessmentMeta holds Canvas-specific quiz metadata from assessment_meta.xml.
@@ -228,56 +233,87 @@ type ItemFeedback struct {
 	Material Material `xml:"flow_mat>material"`
 }
 
-// Quiz is the fully parsed contents of a Canvas QTI zip export.
+// Quiz is the fully parsed contents of a single Canvas assessment from a QTI zip export.
 type Quiz struct {
 	Meta       AssessmentMeta
 	Assessment Assessment
 }
 
-// ParseZip reads a Canvas QTI zip file and returns the parsed Quiz.
-func ParseZip(path string) (*Quiz, error) {
+// ParseZip reads a Canvas QTI zip file and returns all parsed quizzes.
+// Canvas QTI zips may contain multiple assessments; one Quiz is returned per assessment.
+func ParseZip(path string) ([]*Quiz, error) {
 	r, err := zip.OpenReader(path)
 	if err != nil {
 		return nil, fmt.Errorf("open zip: %w", err)
 	}
 	defer r.Close()
 
-	var manifestData, metaData, assessmentData []byte
-
+	// Read all files in the zip into a map keyed by path.
+	files := make(map[string][]byte)
 	for _, f := range r.File {
-		name := f.Name
 		data, err := readZipFile(f)
 		if err != nil {
-			return nil, fmt.Errorf("read %s: %w", name, err)
+			return nil, fmt.Errorf("read %s: %w", f.Name, err)
 		}
-		switch {
-		case name == "imsmanifest.xml":
-			manifestData = data
-		case strings.HasSuffix(name, "/assessment_meta.xml"):
-			metaData = data
-		case strings.HasSuffix(name, ".xml") && !strings.HasSuffix(name, "/assessment_meta.xml") && name != "imsmanifest.xml":
-			assessmentData = data
-		}
+		files[f.Name] = data
 	}
 
-	if manifestData == nil {
+	manifestData, ok := files["imsmanifest.xml"]
+	if !ok {
 		return nil, fmt.Errorf("imsmanifest.xml not found in zip")
 	}
-	if metaData == nil {
-		return nil, fmt.Errorf("assessment_meta.xml not found in zip")
-	}
-	if assessmentData == nil {
-		return nil, fmt.Errorf("assessment XML not found in zip")
+	var manifest Manifest
+	if err := xml.Unmarshal(manifestData, &manifest); err != nil {
+		return nil, fmt.Errorf("parse imsmanifest.xml: %w", err)
 	}
 
-	var quiz Quiz
-	if err := xml.Unmarshal(metaData, &quiz.Meta); err != nil {
-		return nil, fmt.Errorf("parse assessment_meta.xml: %w", err)
+	// Index resources by identifier so we can resolve dependencies.
+	byID := make(map[string]*ManifestResource, len(manifest.Resources))
+	for i := range manifest.Resources {
+		res := &manifest.Resources[i]
+		byID[res.Identifier] = res
 	}
-	if err := xml.Unmarshal(assessmentData, &quiz.Assessment); err != nil {
-		return nil, fmt.Errorf("parse assessment XML: %w", err)
+
+	// Each imsqti_xmlv1p2 resource is one assessment.
+	var quizzes []*Quiz
+	for i := range manifest.Resources {
+		res := &manifest.Resources[i]
+		if res.Type != "imsqti_xmlv1p2" {
+			continue
+		}
+		if len(res.Files) == 0 {
+			continue
+		}
+		assessPath := res.Files[0].Href
+		assessData, ok := files[assessPath]
+		if !ok {
+			return nil, fmt.Errorf("assessment file %s not found in zip", assessPath)
+		}
+
+		// Locate the associated assessment_meta.xml via the dependency reference.
+		var metaData []byte
+		if res.Dependency != nil {
+			if metaRes, ok := byID[res.Dependency.IdentifierRef]; ok && len(metaRes.Files) > 0 {
+				metaData = files[metaRes.Files[0].Href]
+			}
+		}
+
+		var quiz Quiz
+		if metaData != nil {
+			if err := xml.Unmarshal(metaData, &quiz.Meta); err != nil {
+				return nil, fmt.Errorf("parse assessment_meta.xml for %s: %w", assessPath, err)
+			}
+		}
+		if err := xml.Unmarshal(assessData, &quiz.Assessment); err != nil {
+			return nil, fmt.Errorf("parse assessment XML %s: %w", assessPath, err)
+		}
+		quizzes = append(quizzes, &quiz)
 	}
-	return &quiz, nil
+
+	if len(quizzes) == 0 {
+		return nil, fmt.Errorf("no assessments found in zip")
+	}
+	return quizzes, nil
 }
 
 func readZipFile(f *zip.File) ([]byte, error) {
