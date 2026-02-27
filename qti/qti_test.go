@@ -30,23 +30,23 @@ func TestParseZip(t *testing.T) {
 	assert.Equal(t, "Uniprocessor", item0.Title)
 	assert.Equal(t, "true_false_question", item0.QuestionType())
 	assert.Equal(t, "1.0", item0.PointsPossible())
-	require.NotNil(t, item0.Presentation.ResponseLid)
-	assert.Equal(t, "Single", item0.Presentation.ResponseLid.RCardinality)
-	assert.Len(t, item0.Presentation.ResponseLid.Choices, 2)
+	require.NotNil(t, item0.Presentation.ResponseLid())
+	assert.Equal(t, "Single", item0.Presentation.ResponseLid().RCardinality)
+	assert.Len(t, item0.Presentation.ResponseLid().Choices, 2)
 
 	// Item 1: multiple choice (single answer)
 	item1 := quiz.Assessment.Root.Items[1]
 	assert.Equal(t, "multiple_choice_question", item1.QuestionType())
-	require.NotNil(t, item1.Presentation.ResponseLid)
-	assert.Equal(t, "Single", item1.Presentation.ResponseLid.RCardinality)
-	assert.Len(t, item1.Presentation.ResponseLid.Choices, 3)
+	require.NotNil(t, item1.Presentation.ResponseLid())
+	assert.Equal(t, "Single", item1.Presentation.ResponseLid().RCardinality)
+	assert.Len(t, item1.Presentation.ResponseLid().Choices, 3)
 
 	// Item 2: multiple answers
 	item2 := quiz.Assessment.Root.Items[2]
 	assert.Equal(t, "multiple_answers_question", item2.QuestionType())
-	require.NotNil(t, item2.Presentation.ResponseLid)
-	assert.Equal(t, "Multiple", item2.Presentation.ResponseLid.RCardinality)
-	assert.Len(t, item2.Presentation.ResponseLid.Choices, 3)
+	require.NotNil(t, item2.Presentation.ResponseLid())
+	assert.Equal(t, "Multiple", item2.Presentation.ResponseLid().RCardinality)
+	assert.Len(t, item2.Presentation.ResponseLid().Choices, 3)
 }
 
 func TestItemFeedback(t *testing.T) {
@@ -151,11 +151,11 @@ func TestWriteZip(t *testing.T) {
 	assert.Equal(t, "Uniprocessor", item0.Title)
 	assert.Equal(t, "true_false_question", item0.QuestionType())
 	assert.Equal(t, "1.0", item0.PointsPossible())
-	require.NotNil(t, item0.Presentation.ResponseLid)
-	assert.Equal(t, "Single", item0.Presentation.ResponseLid.RCardinality)
-	require.Len(t, item0.Presentation.ResponseLid.Choices, 2)
-	assert.Equal(t, "True", item0.Presentation.ResponseLid.Choices[0].Material.MatText.Text)
-	assert.Equal(t, "False", item0.Presentation.ResponseLid.Choices[1].Material.MatText.Text)
+	require.NotNil(t, item0.Presentation.ResponseLid())
+	assert.Equal(t, "Single", item0.Presentation.ResponseLid().RCardinality)
+	require.Len(t, item0.Presentation.ResponseLid().Choices, 2)
+	assert.Equal(t, "True", item0.Presentation.ResponseLid().Choices[0].Material.MatText.Text)
+	assert.Equal(t, "False", item0.Presentation.ResponseLid().Choices[1].Material.MatText.Text)
 
 	// Item 0: correct answer is "8205" (True)
 	var correctID string
@@ -181,8 +181,8 @@ func TestWriteZip(t *testing.T) {
 	item1 := quiz.Assessment.Root.Items[1]
 	assert.Equal(t, "Question", item1.Title)
 	assert.Equal(t, "multiple_choice_question", item1.QuestionType())
-	assert.Equal(t, "Single", item1.Presentation.ResponseLid.RCardinality)
-	require.Len(t, item1.Presentation.ResponseLid.Choices, 3)
+	assert.Equal(t, "Single", item1.Presentation.ResponseLid().RCardinality)
+	require.Len(t, item1.Presentation.ResponseLid().Choices, 3)
 	// Only general feedback
 	assert.Len(t, item1.ItemFeedback, 1)
 	assert.Equal(t, "general_fb", item1.ItemFeedback[0].Ident)
@@ -202,8 +202,8 @@ func TestWriteZip(t *testing.T) {
 	item2 := quiz.Assessment.Root.Items[2]
 	assert.Equal(t, "Multiple", item2.Title)
 	assert.Equal(t, "multiple_answers_question", item2.QuestionType())
-	assert.Equal(t, "Multiple", item2.Presentation.ResponseLid.RCardinality)
-	require.Len(t, item2.Presentation.ResponseLid.Choices, 3)
+	assert.Equal(t, "Multiple", item2.Presentation.ResponseLid().RCardinality)
+	require.Len(t, item2.Presentation.ResponseLid().Choices, 3)
 
 	// Item 2: AND condition with 2 correct choices and 1 NOT
 	var correctCond *qti.RespCondition
@@ -259,6 +259,61 @@ func TestCorrectAnswers(t *testing.T) {
 	require.NotNil(t, correctCond.ConditionVar.And)
 	assert.Len(t, correctCond.ConditionVar.And.VarEquals, 2)
 	assert.Len(t, correctCond.ConditionVar.And.Nots, 1)
+}
+
+func TestWriteZipFillInBlanks(t *testing.T) {
+	f, err := os.CreateTemp("", "quiz-blanks-*.zip")
+	require.NoError(t, err)
+	f.Close()
+	defer os.Remove(f.Name())
+
+	quiz := &qti.NewQuiz{
+		Title:          "Blanks quiz",
+		PointsPossible: 1.0,
+		Items: []qti.NewItem{
+			{
+				Title:  "FIB",
+				Type:   qti.FillInMultipleBlanksQuestion,
+				Text:   "<p>A [lock_type] ensures only [n] thread(s).</p>",
+				Points: 1.0,
+				Blanks: map[string]qti.NewBlank{
+					"lock_type": {Answers: []string{"mutex"}},
+					"n":         {Answers: []string{"1", "one"}},
+				},
+			},
+		},
+	}
+
+	err = qti.WriteZip(f.Name(), quiz)
+	require.NoError(t, err)
+
+	quizzes, err := qti.ParseZip(f.Name())
+	require.NoError(t, err)
+	require.Len(t, quizzes, 1)
+	parsed := quizzes[0]
+
+	assert.Equal(t, "Blanks quiz", parsed.Meta.Title)
+	require.Len(t, parsed.Assessment.Root.Items, 1)
+
+	item := parsed.Assessment.Root.Items[0]
+	assert.Equal(t, "fill_in_multiple_blanks_question", item.QuestionType())
+	// Should have 2 response_lids (one per blank)
+	require.Len(t, item.Presentation.ResponseLids, 2)
+	// Sorted: lock_type, n
+	assert.Equal(t, "response_lock_type", item.Presentation.ResponseLids[0].Ident)
+	assert.Equal(t, "response_n", item.Presentation.ResponseLids[1].Ident)
+	assert.Len(t, item.Presentation.ResponseLids[0].Choices, 1)
+	assert.Len(t, item.Presentation.ResponseLids[1].Choices, 2)
+
+	// Scoring: 2 conditions with Add action
+	var addConds int
+	for _, c := range item.ResProcessing.RespConditions {
+		if c.SetVar != nil && c.SetVar.Action == "Add" {
+			addConds++
+			assert.Equal(t, "50.00", c.SetVar.Value)
+		}
+	}
+	assert.Equal(t, 2, addConds)
 }
 
 func TestWriteZipMultiple(t *testing.T) {

@@ -82,3 +82,23 @@ func ShortAnswerTemplate() ([]byte, error) {
 		Points:      1,
 	})
 }
+
+// FillInTheBlankTemplate returns TOML bytes for a fill-in-the-blank question template.
+func FillInTheBlankTemplate() ([]byte, error) {
+	// The TOML encoder doesn't handle the [blanks.x] table syntax well,
+	// so we construct this manually.
+	tmpl, err := encodeTemplate(questionTemplate{
+		Type:        "fill-in-the-blank",
+		Difficulty:  "medium",
+		Tags:        []string{},
+		Stem:        "The answer is [blank1].\n",
+		Explanation: "\n",
+		Points:      1,
+	})
+	if err != nil {
+		return nil, err
+	}
+	// Append the blanks section.
+	tmpl = append(tmpl, []byte("\n[blanks.blank1]\nanswers = [\"\"]\n")...)
+	return tmpl, nil
+}

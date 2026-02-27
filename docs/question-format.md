@@ -12,11 +12,12 @@ Each question is a single TOML file. The question's ID is the file path relative
 |---|---|---|
 | `stem` | yes | The question prompt. Supports Markdown and LaTeX. |
 | `topic` | yes | Hierarchical category string, segments separated by `/` (e.g., `virtual-memory/paging`). |
-| `type` | no | `"multiple-choice"`, `"true-false"`, or `"short-answer"`. Inferred from other fields if omitted. |
+| `type` | no | `"multiple-choice"`, `"true-false"`, `"short-answer"`, or `"fill-in-the-blank"`. Inferred from other fields if omitted. |
 | `choices` | for multiple-choice | Array of answer choices. |
 | `answer_tf` | for true-false | Boolean answer (`true` or `false`). Setting this also sets `type = "true-false"`. |
 | `answer` | for short-answer | The correct answer string. Setting this also sets `type = "short-answer"`. |
 | `answer_space` | no | Height of the answer blank box for short-answer questions (e.g. `"2in"`). Defaults to the `\defaultanswerlen` macro (`1in`; overridable per-exam via `\renewcommand` in the exam's `preamble`). |
+| `blanks` | for fill-in-the-blank | Map of blank names to blank definitions. Setting this also sets `type = "fill-in-the-blank"`. Each blank name must appear in the stem as `[name]`. |
 | `explanation` | no | Explanation of the correct answer, shown in solutions. |
 | `difficulty` | no | `"easy"`, `"medium"`, or `"hard"`. |
 | `tags` | no | Array of keyword strings for filtering. |
@@ -88,6 +89,45 @@ topic = "processes"
 difficulty = "easy"
 tags = ["system-calls", "fork"]
 ```
+
+### Fill-in-the-blank example (single blank)
+
+```toml
+stem = "The system call to create a child process is [blank1]."
+
+topic = "processes"
+difficulty = "easy"
+tags = ["system-calls", "fork"]
+
+[blanks.blank1]
+answers = ["fork()", "fork"]
+```
+
+### Fill-in-the-blank example (multiple blanks)
+
+```toml
+stem = "A [lock_type] ensures only [n] thread(s) can be in a critical section."
+
+topic = "concurrency"
+difficulty = "medium"
+tags = ["locks", "mutex"]
+
+[blanks.lock_type]
+answers = ["mutex"]
+size = "1.5in"
+
+[blanks.n]
+answers = ["1", "one"]
+```
+
+Each blank has:
+
+- `answers` (string array, required) — list of accepted answers (any match is correct)
+- `size` (string, optional) — width of the underline in LaTeX output (e.g. `"1.5in"`). Defaults to `"1in"`.
+
+Blank names in the stem use `[name]` syntax. In LaTeX output, blanks render as `\underline{\hspace{size}}`; in Canvas QTI, they map to `fill_in_multiple_blanks_question`.
+
+**Important:** Because TOML table headers like `[blanks.blank1]` capture all subsequent key-value pairs, place all flat fields (`topic`, `difficulty`, `tags`, etc.) _before_ any `[blanks.*]` sections.
 
 ### Stem formatting
 

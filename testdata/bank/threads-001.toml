@@ -1,0 +1,8 @@
+stem = "The system call to create a child process is [blank1]."
+
+topic = "processes"
+difficulty = "easy"
+tags = ["system-calls", "fork"]
+
+[blanks.blank1]
+answers = ["fork()", "fork"]

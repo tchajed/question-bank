@@ -96,9 +96,48 @@ func TestLoadBank(t *testing.T) {
 	assert.Contains(t, bank, "os-001")
 	assert.Contains(t, bank, "vm-001")
 	assert.Contains(t, bank, "vm-002")
+	assert.Contains(t, bank, "threads-001")
+	assert.Contains(t, bank, "threads-002")
 	q, ok := bank["os-001"].(*question.Question)
 	require.True(t, ok)
 	assert.Equal(t, "os-001", q.Id)
+}
+
+func TestParseFillInTheBlankSingle(t *testing.T) {
+	q, err := question.ParseFile("../testdata/bank", "threads-001.toml")
+	require.NoError(t, err)
+
+	assert.Equal(t, question.FillInTheBlank, q.Type)
+	require.Len(t, q.Blanks, 1)
+	assert.Equal(t, []string{"fork()", "fork"}, q.Blanks["blank1"].Answers)
+	assert.Equal(t, "1in", q.Blanks["blank1"].Size) // default
+}
+
+func TestParseFillInTheBlankMultiple(t *testing.T) {
+	q, err := question.ParseFile("../testdata/bank", "threads-002.toml")
+	require.NoError(t, err)
+
+	assert.Equal(t, question.FillInTheBlank, q.Type)
+	require.Len(t, q.Blanks, 2)
+	assert.Equal(t, []string{"mutex"}, q.Blanks["lock_type"].Answers)
+	assert.Equal(t, "1.5in", q.Blanks["lock_type"].Size)
+	assert.Equal(t, []string{"1", "one"}, q.Blanks["n"].Answers)
+	assert.Equal(t, "1in", q.Blanks["n"].Size) // default
+}
+
+func TestFillInTheBlankTypeInference(t *testing.T) {
+	q, err := question.Parse([]byte(`topic = "os"
+stem = "The answer is [x]."
+[blanks.x]
+answers = ["42"]`))
+	require.NoError(t, err)
+	assert.Equal(t, question.FillInTheBlank, q.Type)
+}
+
+func TestFillInTheBlankMissingFromStem(t *testing.T) {
+	_, err := question.Parse([]byte("topic = \"os\"\nstem = \"The answer is something.\"\n\n[blanks.x]\nanswers = [\"42\"]\n"))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "blank \"x\" not found in stem")
 }
 
 func TestTypeDefault(t *testing.T) {

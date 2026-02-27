@@ -119,8 +119,18 @@ func (it *Item) PointsPossible() string {
 type Presentation struct {
 	// Material holds the question text (HTML or plain text).
 	Material Material `xml:"material"`
-	// ResponseLid is the response container for choice questions.
-	ResponseLid *ResponseLid `xml:"response_lid"`
+	// ResponseLids are the response containers for choice and fill-in-the-blank questions.
+	// Most question types use a single entry; fill_in_multiple_blanks uses one per blank.
+	ResponseLids []ResponseLid `xml:"response_lid"`
+}
+
+// ResponseLid returns the first response_lid, or nil if there are none.
+// This is a convenience for question types that use a single response_lid.
+func (p *Presentation) ResponseLid() *ResponseLid {
+	if len(p.ResponseLids) == 0 {
+		return nil
+	}
+	return &p.ResponseLids[0]
 }
 
 // Material holds text content.

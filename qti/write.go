@@ -7,6 +7,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -23,11 +24,17 @@ type NewChoice struct {
 type ItemType string
 
 const (
-	TrueFalseQuestion      ItemType = "true_false_question"
-	MultipleChoiceQuestion  ItemType = "multiple_choice_question"
-	MultipleAnswersQuestion ItemType = "multiple_answers_question"
-	ShortAnswerQuestion     ItemType = "short_answer_question"
+	TrueFalseQuestion              ItemType = "true_false_question"
+	MultipleChoiceQuestion         ItemType = "multiple_choice_question"
+	MultipleAnswersQuestion        ItemType = "multiple_answers_question"
+	ShortAnswerQuestion            ItemType = "short_answer_question"
+	FillInMultipleBlanksQuestion   ItemType = "fill_in_multiple_blanks_question"
 )
+
+// NewBlank describes one fill-in-the-blank slot.
+type NewBlank struct {
+	Answers []string
+}
 
 // NewItem describes a single quiz question to create.
 type NewItem struct {
@@ -47,6 +54,8 @@ type NewItem struct {
 	IncorrectFeedback string
 	// Answer is the correct answer text for ShortAnswerQuestion.
 	Answer string
+	// Blanks maps blank names to accepted answers for FillInMultipleBlanksQuestion.
+	Blanks map[string]NewBlank
 }
 
 // NewQuiz describes a quiz to create as a Canvas QTI zip file.
@@ -258,9 +267,9 @@ type wItemMeta struct {
 }
 
 type wPresentation struct {
-	Material    wMaterial     `xml:"material"`
-	ResponseLid *wResponseLid `xml:"response_lid"`
-	ResponseStr *wResponseStr `xml:"response_str"`
+	Material     wMaterial      `xml:"material"`
+	ResponseLids []wResponseLid `xml:"response_lid"`
+	ResponseStr  *wResponseStr  `xml:"response_str"`
 }
 
 type wMaterial struct {
@@ -275,6 +284,7 @@ type wMatText struct {
 type wResponseLid struct {
 	Ident        string        `xml:"ident,attr"`
 	RCardinality string        `xml:"rcardinality,attr"`
+	Material     *wMaterial    `xml:"material,omitempty"`
 	RenderChoice wRenderChoice `xml:"render_choice"`
 }
 
@@ -474,12 +484,34 @@ func buildItem(item *NewItem) wItem {
 			RCardinality: "Single",
 			RenderFib:    wRenderFib{Label: wFibLabel{Ident: "answer1", RShuffle: "No"}},
 		}
+	} else if item.Type == FillInMultipleBlanksQuestion {
+		blankNames := make([]string, 0, len(item.Blanks))
+		for name := range item.Blanks {
+			blankNames = append(blankNames, name)
+		}
+		sort.Strings(blankNames)
+		for _, name := range blankNames {
+			blank := item.Blanks[name]
+			blankLabels := make([]wResponseLabel, len(blank.Answers))
+			for i, ans := range blank.Answers {
+				blankLabels[i] = wResponseLabel{
+					Ident:    generateID(),
+					Material: wMaterial{MatText: wMatText{TextType: "text/plain", Text: ans}},
+				}
+			}
+			presentation.ResponseLids = append(presentation.ResponseLids, wResponseLid{
+				Ident:        "response_" + name,
+				RCardinality: "Single",
+				Material:     &wMaterial{MatText: wMatText{TextType: "text/plain", Text: name}},
+				RenderChoice: wRenderChoice{Labels: blankLabels},
+			})
+		}
 	} else {
-		presentation.ResponseLid = &wResponseLid{
+		presentation.ResponseLids = []wResponseLid{{
 			Ident:        "response1",
 			RCardinality: rcard,
 			RenderChoice: wRenderChoice{Labels: labels},
-		}
+		}}
 	}
 
 	return wItem{
@@ -499,6 +531,30 @@ func buildResProc(item *NewItem, choices []NewChoice) wResProc {
 	var conds []wRespCond
 
 	switch item.Type {
+	case FillInMultipleBlanksQuestion:
+		numBlanks := len(item.Blanks)
+		blankNames := make([]string, 0, len(item.Blanks))
+		for name := range item.Blanks {
+			blankNames = append(blankNames, name)
+		}
+		sort.Strings(blankNames)
+		for _, name := range blankNames {
+			blank := item.Blanks[name]
+			if len(blank.Answers) == 0 {
+				continue
+			}
+			var varEquals []wVarEqual
+			for _, ans := range blank.Answers {
+				varEquals = append(varEquals, wVarEqual{RespIdent: "response_" + name, Case: "No", Value: ans})
+			}
+			scorePerBlank := 100.0 / float64(numBlanks)
+			conds = append(conds, wRespCond{
+				Continue:     "No",
+				ConditionVar: wCondVar{varEquals: varEquals},
+				SetVar:       &wSetVar{VarName: "SCORE", Action: "Add", Value: fmt.Sprintf("%.2f", scorePerBlank)},
+			})
+		}
+
 	case ShortAnswerQuestion:
 		if item.Answer != "" {
 			conds = append(conds, wRespCond{

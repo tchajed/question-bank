@@ -151,6 +151,8 @@ func questionToItem(q *question.Question, groupStem string) qti.NewItem {
 		}
 	case question.ShortAnswer:
 		qtype = qti.ShortAnswerQuestion
+	case question.FillInTheBlank:
+		qtype = qti.FillInMultipleBlanksQuestion
 	}
 
 	choices := make([]qti.NewChoice, len(q.Choices))
@@ -166,6 +168,14 @@ func questionToItem(q *question.Question, groupStem string) qti.NewItem {
 		generalFeedback = "<p>" + html.EscapeString(q.Explanation) + "</p>"
 	}
 
+	var blanks map[string]qti.NewBlank
+	if q.Type == question.FillInTheBlank {
+		blanks = make(map[string]qti.NewBlank, len(q.Blanks))
+		for name, b := range q.Blanks {
+			blanks[name] = qti.NewBlank{Answers: b.Answers}
+		}
+	}
+
 	return qti.NewItem{
 		Title:           q.Id,
 		Text:            text,
@@ -174,6 +184,7 @@ func questionToItem(q *question.Question, groupStem string) qti.NewItem {
 		Choices:         choices,
 		GeneralFeedback: generalFeedback,
 		Answer:          q.Answer,
+		Blanks:          blanks,
 	}
 }
 
