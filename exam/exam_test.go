@@ -14,11 +14,13 @@ func TestParseFile(t *testing.T) {
 	e, err := exam.ParseFile("../testdata/exams/exam.toml")
 	require.NoError(t, err)
 
-	require.Len(t, e.Sections, 2)
+	require.Len(t, e.Sections, 3)
 	assert.Equal(t, "Operating Systems", e.Sections[0].Name)
 	assert.Equal(t, []string{"os-001", "processes-group-001/1", "processes-group-001/2"}, e.Sections[0].Questions)
-	assert.Equal(t, "Virtual Memory", e.Sections[1].Name)
-	assert.Equal(t, []string{"vm-001", "vm-002"}, e.Sections[1].Questions)
+	assert.Equal(t, "Concurrency", e.Sections[1].Name)
+	assert.Equal(t, []string{"threads-001", "threads-002"}, e.Sections[1].Questions)
+	assert.Equal(t, "Virtual Memory", e.Sections[2].Name)
+	assert.Equal(t, []string{"vm-001", "vm-002"}, e.Sections[2].Questions)
 }
 
 func TestResolve(t *testing.T) {
@@ -31,7 +33,7 @@ func TestResolve(t *testing.T) {
 	resolved, err := e.Resolve(bank)
 	require.NoError(t, err)
 
-	require.Len(t, resolved.Sections, 2)
+	require.Len(t, resolved.Sections, 3)
 	// os-001 + the two group parts merged into one QuestionGroup
 	require.Len(t, resolved.Sections[0].Items, 2)
 	assert.Equal(t, "os-001", resolved.Sections[0].Items[0].GetId())
@@ -41,9 +43,14 @@ func TestResolve(t *testing.T) {
 	require.True(t, ok)
 	require.Len(t, g.Parts, 2)
 
+	// Concurrency section: fill-in-the-blank questions
 	require.Len(t, resolved.Sections[1].Items, 2)
-	assert.Equal(t, "vm-001", resolved.Sections[1].Items[0].GetId())
-	assert.Equal(t, "vm-002", resolved.Sections[1].Items[1].GetId())
+	assert.Equal(t, "threads-001", resolved.Sections[1].Items[0].GetId())
+	assert.Equal(t, "threads-002", resolved.Sections[1].Items[1].GetId())
+
+	require.Len(t, resolved.Sections[2].Items, 2)
+	assert.Equal(t, "vm-001", resolved.Sections[2].Items[0].GetId())
+	assert.Equal(t, "vm-002", resolved.Sections[2].Items[1].GetId())
 }
 
 func TestResolveMissingQuestion(t *testing.T) {
@@ -88,5 +95,5 @@ func TestLoadWithDefaults(t *testing.T) {
 	assert.NotEmpty(t, e.CoverPage)
 
 	// Sections from exam.toml
-	require.Len(t, e.Sections, 2)
+	require.Len(t, e.Sections, 3)
 }

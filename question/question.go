@@ -29,6 +29,7 @@ const (
 	MultipleChoice QuestionType = "multiple-choice"
 	TrueFalse      QuestionType = "true-false"
 	ShortAnswer    QuestionType = "short-answer"
+	FillInTheBlank QuestionType = "fill-in-the-blank"
 )
 
 // Short returns an abbreviated form of the question type: "choice", "tf", or "short".
@@ -42,7 +43,18 @@ func (t QuestionType) Short() string {
 	if t == ShortAnswer {
 		return "short"
 	}
+	if t == FillInTheBlank {
+		return "blank"
+	}
 	panic(fmt.Errorf("unhandled type: %s", t))
+}
+
+// Blank is one fill-in-the-blank slot with accepted answers and display size.
+type Blank struct {
+	Answers []string `toml:"answers"`
+	// Size is the width of the underline in LaTeX (e.g. "1in", "1.5in").
+	// Defaults to "1in".
+	Size string `toml:"size,omitempty"`
 }
 
 // Choice is one option in a multiple-choice question.
@@ -70,6 +82,9 @@ type Question struct {
 	// AnswerSpace overrides the blank box size for short-answer questions (e.g. "2in").
 	// When empty, the LaTeX \defaultanswerlen macro is used.
 	AnswerSpace string `toml:"answer_space,omitempty"`
+	// Blanks for fill-in-the-blank questions. Keys are blank names that appear
+	// as [name] in the stem.
+	Blanks map[string]Blank `toml:"blanks,omitempty"`
 
 	// Topic helps categorize questions. Can be hierarchical, separated by '/'.
 	Topic string `toml:"topic"`
@@ -107,7 +122,9 @@ func postProcess(q *Question) error {
 		return err
 	}
 	if q.Type == "" {
-		if q.AnswerTF != nil {
+		if len(q.Blanks) > 0 {
+			q.Type = FillInTheBlank
+		} else if q.AnswerTF != nil {
 			q.Type = TrueFalse
 		} else if q.Answer != "" {
 			q.Type = ShortAnswer
@@ -119,6 +136,25 @@ func postProcess(q *Question) error {
 		q.Choices = []Choice{
 			{Text: "True", Correct: *q.AnswerTF},
 			{Text: "False", Correct: !*q.AnswerTF},
+		}
+	}
+	if q.Type == FillInTheBlank {
+		if len(q.Blanks) == 0 {
+			return fmt.Errorf("fill-in-the-blank question missing required field: blanks")
+		}
+		for name := range q.Blanks {
+			placeholder := "[" + name + "]"
+			if !strings.Contains(q.Stem, placeholder) {
+				return fmt.Errorf("blank %q not found in stem as %s", name, placeholder)
+			}
+		}
+	} else if len(q.Blanks) > 0 {
+		return fmt.Errorf("blanks field is only valid for fill-in-the-blank questions")
+	}
+	for name, b := range q.Blanks {
+		if b.Size == "" {
+			b.Size = "1in"
+			q.Blanks[name] = b
 		}
 	}
 	if q.Points == 0 {

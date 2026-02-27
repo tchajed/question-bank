@@ -1,0 +1,12 @@
+stem = "A [lock_type] ensures only [n] thread(s) can be in a critical section."
+
+topic = "concurrency"
+difficulty = "medium"
+tags = ["locks", "mutex"]
+
+[blanks.lock_type]
+answers = ["mutex"]
+size = "1.5in"
+
+[blanks.n]
+answers = ["1", "one"]

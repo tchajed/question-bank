@@ -1,9 +1,12 @@
 title = "Midterm 1"
-semester = "Spring 2026"
 
 [[sections]]
 name = "Operating Systems"
 questions = ["os-001", "processes-group-001/1", "processes-group-001/2"]
+
+[[sections]]
+name = "Concurrency"
+questions = ["threads-001", "threads-002"]
 
 [[sections]]
 name = "Virtual Memory"

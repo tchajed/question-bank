@@ -7,6 +7,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -23,11 +24,17 @@ type NewChoice struct {
 type ItemType string
 
 const (
-	TrueFalseQuestion      ItemType = "true_false_question"
-	MultipleChoiceQuestion  ItemType = "multiple_choice_question"
-	MultipleAnswersQuestion ItemType = "multiple_answers_question"
-	ShortAnswerQuestion     ItemType = "short_answer_question"
+	TrueFalseQuestion              ItemType = "true_false_question"
+	MultipleChoiceQuestion         ItemType = "multiple_choice_question"
+	MultipleAnswersQuestion        ItemType = "multiple_answers_question"
+	ShortAnswerQuestion            ItemType = "short_answer_question"
+	FillInMultipleBlanksQuestion   ItemType = "fill_in_multiple_blanks_question"
 )
+
+// NewBlank describes one fill-in-the-blank slot.
+type NewBlank struct {
+	Answers []string
+}
 
 // NewItem describes a single quiz question to create.
 type NewItem struct {
@@ -47,6 +54,8 @@ type NewItem struct {
 	IncorrectFeedback string
 	// Answer is the correct answer text for ShortAnswerQuestion.
 	Answer string
+	// Blanks maps blank names to accepted answers for FillInMultipleBlanksQuestion.
+	Blanks map[string]NewBlank
 }
 
 // NewQuiz describes a quiz to create as a Canvas QTI zip file.
@@ -62,8 +71,13 @@ type NewQuiz struct {
 	Items    []NewItem
 }
 
-// WriteZip creates a Canvas QTI zip file at path from quiz.
-func WriteZip(path string, quiz *NewQuiz) (err error) {
+// WriteZip creates a Canvas QTI zip file at path containing all provided quizzes.
+// At least one quiz must be provided.
+func WriteZip(path string, quizzes ...*NewQuiz) (err error) {
+	if len(quizzes) == 0 {
+		return fmt.Errorf("WriteZip: at least one quiz required")
+	}
+
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -81,14 +95,22 @@ func WriteZip(path string, quiz *NewQuiz) (err error) {
 		}
 	}()
 
-	quizID := quiz.ID
-	if quizID == "" {
-		quizID = generateID()
+	// Assign IDs and build per-quiz data.
+	entries := make([]quizEntry, len(quizzes))
+	for i, quiz := range quizzes {
+		quizID := quiz.ID
+		if quizID == "" {
+			quizID = generateID()
+		}
+		entries[i] = quizEntry{
+			quizID: quizID,
+			metaID: generateID(),
+			dir:    quizID + "/",
+			quiz:   quiz,
+		}
 	}
-	metaID := generateID()
-	dir := quizID + "/"
 
-	manifestXML, err := marshalXML(buildManifest(quizID, metaID, dir))
+	manifestXML, err := marshalXML(buildManifest(entries))
 	if err != nil {
 		return fmt.Errorf("build manifest: %w", err)
 	}
@@ -96,20 +118,22 @@ func WriteZip(path string, quiz *NewQuiz) (err error) {
 		return fmt.Errorf("write manifest: %w", err)
 	}
 
-	metaXML, err := marshalXML(buildMeta(quizID, quiz))
-	if err != nil {
-		return fmt.Errorf("build assessment_meta: %w", err)
-	}
-	if err := writeZipEntry(w, dir+"assessment_meta.xml", metaXML); err != nil {
-		return fmt.Errorf("write assessment_meta: %w", err)
-	}
+	for _, e := range entries {
+		metaXML, err := marshalXML(buildMeta(e.quizID, e.quiz))
+		if err != nil {
+			return fmt.Errorf("build assessment_meta for %s: %w", e.quizID, err)
+		}
+		if err := writeZipEntry(w, e.dir+"assessment_meta.xml", metaXML); err != nil {
+			return fmt.Errorf("write assessment_meta for %s: %w", e.quizID, err)
+		}
 
-	assessXML, err := marshalXML(buildAssessment(quizID, quiz))
-	if err != nil {
-		return fmt.Errorf("build assessment XML: %w", err)
-	}
-	if err := writeZipEntry(w, dir+quizID+".xml", assessXML); err != nil {
-		return fmt.Errorf("write assessment XML: %w", err)
+		assessXML, err := marshalXML(buildAssessment(e.quizID, e.quiz))
+		if err != nil {
+			return fmt.Errorf("build assessment XML for %s: %w", e.quizID, err)
+		}
+		if err := writeZipEntry(w, e.dir+e.quizID+".xml", assessXML); err != nil {
+			return fmt.Errorf("write assessment XML for %s: %w", e.quizID, err)
+		}
 	}
 
 	return nil
@@ -143,25 +167,34 @@ type wDependency struct {
 	IdentifierRef string `xml:"identifierref,attr"`
 }
 
-func buildManifest(quizID, metaID, dir string) wManifest {
+type quizEntry struct {
+	quizID string
+	metaID string
+	dir    string
+	quiz   *NewQuiz
+}
+
+func buildManifest(entries []quizEntry) wManifest {
+	var resources []wManifestResource
+	for _, e := range entries {
+		resources = append(resources,
+			wManifestResource{
+				Identifier: e.quizID,
+				Type:       "imsqti_xmlv1p2",
+				Files:      []wResFile{{Href: e.dir + e.quizID + ".xml"}},
+				Dependency: &wDependency{IdentifierRef: e.metaID},
+			},
+			wManifestResource{
+				Identifier: e.metaID,
+				Type:       "associatedcontent/imscc_xmlv1p1/learning-application-resource",
+				Href:       e.dir + "assessment_meta.xml",
+				Files:      []wResFile{{Href: e.dir + "assessment_meta.xml"}},
+			},
+		)
+	}
 	return wManifest{
 		Identifier: generateID(),
-		Resources: wManifestResources{
-			Resources: []wManifestResource{
-				{
-					Identifier: quizID,
-					Type:       "imsqti_xmlv1p2",
-					Files:      []wResFile{{Href: dir + quizID + ".xml"}},
-					Dependency: &wDependency{IdentifierRef: metaID},
-				},
-				{
-					Identifier: metaID,
-					Type:       "associatedcontent/imscc_xmlv1p1/learning-application-resource",
-					Href:       dir + "assessment_meta.xml",
-					Files:      []wResFile{{Href: dir + "assessment_meta.xml"}},
-				},
-			},
-		},
+		Resources:  wManifestResources{Resources: resources},
 	}
 }
 
@@ -234,9 +267,9 @@ type wItemMeta struct {
 }
 
 type wPresentation struct {
-	Material    wMaterial     `xml:"material"`
-	ResponseLid *wResponseLid `xml:"response_lid"`
-	ResponseStr *wResponseStr `xml:"response_str"`
+	Material     wMaterial      `xml:"material"`
+	ResponseLids []wResponseLid `xml:"response_lid"`
+	ResponseStr  *wResponseStr  `xml:"response_str"`
 }
 
 type wMaterial struct {
@@ -251,6 +284,7 @@ type wMatText struct {
 type wResponseLid struct {
 	Ident        string        `xml:"ident,attr"`
 	RCardinality string        `xml:"rcardinality,attr"`
+	Material     *wMaterial    `xml:"material,omitempty"`
 	RenderChoice wRenderChoice `xml:"render_choice"`
 }
 
@@ -450,12 +484,34 @@ func buildItem(item *NewItem) wItem {
 			RCardinality: "Single",
 			RenderFib:    wRenderFib{Label: wFibLabel{Ident: "answer1", RShuffle: "No"}},
 		}
+	} else if item.Type == FillInMultipleBlanksQuestion {
+		blankNames := make([]string, 0, len(item.Blanks))
+		for name := range item.Blanks {
+			blankNames = append(blankNames, name)
+		}
+		sort.Strings(blankNames)
+		for _, name := range blankNames {
+			blank := item.Blanks[name]
+			blankLabels := make([]wResponseLabel, len(blank.Answers))
+			for i, ans := range blank.Answers {
+				blankLabels[i] = wResponseLabel{
+					Ident:    generateID(),
+					Material: wMaterial{MatText: wMatText{TextType: "text/plain", Text: ans}},
+				}
+			}
+			presentation.ResponseLids = append(presentation.ResponseLids, wResponseLid{
+				Ident:        "response_" + name,
+				RCardinality: "Single",
+				Material:     &wMaterial{MatText: wMatText{TextType: "text/plain", Text: name}},
+				RenderChoice: wRenderChoice{Labels: blankLabels},
+			})
+		}
 	} else {
-		presentation.ResponseLid = &wResponseLid{
+		presentation.ResponseLids = []wResponseLid{{
 			Ident:        "response1",
 			RCardinality: rcard,
 			RenderChoice: wRenderChoice{Labels: labels},
-		}
+		}}
 	}
 
 	return wItem{
@@ -475,6 +531,30 @@ func buildResProc(item *NewItem, choices []NewChoice) wResProc {
 	var conds []wRespCond
 
 	switch item.Type {
+	case FillInMultipleBlanksQuestion:
+		numBlanks := len(item.Blanks)
+		blankNames := make([]string, 0, len(item.Blanks))
+		for name := range item.Blanks {
+			blankNames = append(blankNames, name)
+		}
+		sort.Strings(blankNames)
+		for _, name := range blankNames {
+			blank := item.Blanks[name]
+			if len(blank.Answers) == 0 {
+				continue
+			}
+			var varEquals []wVarEqual
+			for _, ans := range blank.Answers {
+				varEquals = append(varEquals, wVarEqual{RespIdent: "response_" + name, Case: "No", Value: ans})
+			}
+			scorePerBlank := 100.0 / float64(numBlanks)
+			conds = append(conds, wRespCond{
+				Continue:     "No",
+				ConditionVar: wCondVar{varEquals: varEquals},
+				SetVar:       &wSetVar{VarName: "SCORE", Action: "Add", Value: fmt.Sprintf("%.2f", scorePerBlank)},
+			})
+		}
+
 	case ShortAnswerQuestion:
 		if item.Answer != "" {
 			conds = append(conds, wRespCond{

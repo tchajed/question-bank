@@ -36,6 +36,10 @@ type renderQuestion struct {
 	Choices      []question.Choice
 	Answer       string // correct answer for short-answer questions
 	AnswerSpace  string // box size override for short-answer (e.g. "2in"); empty means \defaultanswerlen
+	// BlankStem and AnswerStem are pre-rendered stems for fill-in-the-blank
+	// questions, with [name] placeholders replaced by underlines or answers.
+	BlankStem  string
+	AnswerStem string
 	Explanation  string
 	Figure       string // path to figure file (with extension)
 	ShowMetadata bool
@@ -93,12 +97,27 @@ func (q *renderQuestion) renderTeX() string {
 	if q.ShowMetadata {
 		fmt.Fprintf(&sb, "{\\footnotesize\\textsf{%s \\textbar{} topic: %s \\textbar{} difficulty: %s}}\\\\[2pt]\n", q.Id, q.Topic, q.Difficulty)
 	}
-	sb.WriteString(q.Stem)
-	sb.WriteString("\n")
+	if q.Type == string(question.FillInTheBlank) {
+		sb.WriteString("\\ifprintanswers\n")
+		sb.WriteString(q.AnswerStem)
+		sb.WriteString("\n")
+		if q.Explanation != "" {
+			fmt.Fprintf(&sb, "\\paragraph{Solution:}%s\n", q.Explanation)
+		}
+		sb.WriteString("\\else\n")
+		sb.WriteString(q.BlankStem)
+		sb.WriteString("\n")
+		sb.WriteString("\\fi\n")
+	} else {
+		sb.WriteString(q.Stem)
+		sb.WriteString("\n")
+	}
 
 	writeFigure(&sb, q.Figure)
 
-	if q.Type == string(question.ShortAnswer) {
+	if q.Type == string(question.FillInTheBlank) {
+		// Already handled above; no choices to render.
+	} else if q.Type == string(question.ShortAnswer) {
 		sb.WriteString("\\ifprintanswers\n")
 		fmt.Fprintf(&sb, "\\paragraph{Answer:}\\fbox{%s}\n", q.Answer)
 		if q.Explanation != "" {
@@ -227,16 +246,33 @@ func buildRenderQuestion(q *question.Question, bankDir string, showMetadata bool
 			Correct: c.Correct,
 		}
 	}
+	stem := replaceGroupRefs(q.Stem, groupId)
+	var blankStem, answerStem string
+	if q.Type == question.FillInTheBlank {
+		// Replace [name] placeholders before markdown conversion so that
+		// blank names with underscores (e.g. lock_type) are handled correctly.
+		bs := stem
+		as := stem
+		for name, b := range q.Blanks {
+			as = strings.ReplaceAll(as, "["+name+"]", fmt.Sprintf("\\fbox{%s}", b.Answers[0]))
+			bs = strings.ReplaceAll(bs, "["+name+"]", fmt.Sprintf("\\underline{\\hspace{%s}}", b.Size))
+		}
+		blankStem = markdownToTeX(bs)
+		answerStem = markdownToTeX(as)
+	}
+
 	return &renderQuestion{
 		Id:           q.Id,
 		Topic:        q.Topic,
 		Difficulty:   string(q.Difficulty),
 		Points:       q.Points,
-		Stem:         markdownToTeX(replaceGroupRefs(q.Stem, groupId)),
+		Stem:         markdownToTeX(stem),
 		Type:         string(q.Type),
 		Choices:      choices,
 		Answer:       markdownToTeX(replaceGroupRefs(q.Answer, groupId)),
 		AnswerSpace:  q.AnswerSpace,
+		BlankStem:    blankStem,
+		AnswerStem:   answerStem,
 		Explanation:  markdownToTeX(replaceGroupRefs(q.Explanation, groupId)),
 		Figure:       figurePath(q.Figure, bankDir),
 		ShowMetadata: showMetadata,

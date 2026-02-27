@@ -15,32 +15,23 @@ import (
 var canvasOutput string
 
 var canvasCmd = &cobra.Command{
-	Use:   "canvas <exam.toml>",
-	Short: "Export an exam to a Canvas QTI zip file",
-	Long: `Export an exam TOML file as a Canvas QTI zip for uploading to Canvas.
+	Use:   "canvas <exam.toml> [exam2.toml ...]",
+	Short: "Export one or more exams to a Canvas QTI zip file",
+	Long: `Export one or more exam TOML files as a Canvas QTI zip for uploading to Canvas.
+Each exam becomes a separate assessment in the zip.
 
-Reads defaults.toml from the same directory as the exam file (if present) for
+Reads defaults.toml from the same directory as each exam file (if present) for
 course-level settings such as course_code.
 
-The output file defaults to the exam name with a .zip extension next to the TOML file.`,
-	Args: cobra.ExactArgs(1),
+With a single exam file, the output defaults to the exam name with a .zip
+extension next to the TOML file. With multiple exam files all in the same
+directory foo/, the output defaults to foo.zip next to that directory. If the
+exam files are in different directories, --output is required.`,
+	Args: cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		examPath := args[0]
-
-		absExamPath, err := filepath.Abs(examPath)
-		if err != nil {
-			return err
-		}
-		examDir := filepath.Dir(absExamPath)
-
 		absBankDir, err := filepath.Abs(bankDir)
 		if err != nil {
 			return err
-		}
-
-		e, err := exam.LoadWithDefaults(absExamPath)
-		if err != nil {
-			return fmt.Errorf("loading exam: %w", err)
 		}
 
 		bank, err := question.LoadBank(absBankDir)
@@ -48,20 +39,49 @@ The output file defaults to the exam name with a .zip extension next to the TOML
 			return fmt.Errorf("loading bank: %w", err)
 		}
 
-		resolved, err := e.Resolve(bank)
-		if err != nil {
-			return fmt.Errorf("resolving questions: %w", err)
+		// Resolve absolute paths and check all exam directories.
+		absPaths := make([]string, len(args))
+		for i, arg := range args {
+			p, err := filepath.Abs(arg)
+			if err != nil {
+				return err
+			}
+			absPaths[i] = p
 		}
 
-		quiz := examToQuiz(e, resolved)
-
-		base := strings.TrimSuffix(filepath.Base(absExamPath), ".toml")
 		outPath := canvasOutput
 		if outPath == "" {
-			outPath = filepath.Join(examDir, base+".zip")
+			if len(absPaths) == 1 {
+				base := strings.TrimSuffix(filepath.Base(absPaths[0]), ".toml")
+				outPath = filepath.Join(filepath.Dir(absPaths[0]), base+".zip")
+			} else {
+				// All exam files must share the same directory.
+				dir := filepath.Dir(absPaths[0])
+				for _, p := range absPaths[1:] {
+					if filepath.Dir(p) != dir {
+						return fmt.Errorf("exam files are in different directories; use --output to specify an output path")
+					}
+				}
+				outPath = dir + ".zip"
+			}
 		}
 
-		if err := qti.WriteZip(outPath, quiz); err != nil {
+		var quizzes []*qti.NewQuiz
+		for _, absExamPath := range absPaths {
+			e, err := exam.LoadWithDefaults(absExamPath)
+			if err != nil {
+				return fmt.Errorf("loading %s: %w", absExamPath, err)
+			}
+
+			resolved, err := e.Resolve(bank)
+			if err != nil {
+				return fmt.Errorf("resolving questions in %s: %w", absExamPath, err)
+			}
+
+			quizzes = append(quizzes, examToQuiz(e, resolved))
+		}
+
+		if err := qti.WriteZip(outPath, quizzes...); err != nil {
 			return fmt.Errorf("writing QTI zip: %w", err)
 		}
 		fmt.Fprintf(cmd.OutOrStdout(), "wrote %s\n", outPath)
@@ -131,6 +151,8 @@ func questionToItem(q *question.Question, groupStem string) qti.NewItem {
 		}
 	case question.ShortAnswer:
 		qtype = qti.ShortAnswerQuestion
+	case question.FillInTheBlank:
+		qtype = qti.FillInMultipleBlanksQuestion
 	}
 
 	choices := make([]qti.NewChoice, len(q.Choices))
@@ -146,6 +168,14 @@ func questionToItem(q *question.Question, groupStem string) qti.NewItem {
 		generalFeedback = "<p>" + html.EscapeString(q.Explanation) + "</p>"
 	}
 
+	var blanks map[string]qti.NewBlank
+	if q.Type == question.FillInTheBlank {
+		blanks = make(map[string]qti.NewBlank, len(q.Blanks))
+		for name, b := range q.Blanks {
+			blanks[name] = qti.NewBlank{Answers: b.Answers}
+		}
+	}
+
 	return qti.NewItem{
 		Title:           q.Id,
 		Text:            text,
@@ -154,10 +184,11 @@ func questionToItem(q *question.Question, groupStem string) qti.NewItem {
 		Choices:         choices,
 		GeneralFeedback: generalFeedback,
 		Answer:          q.Answer,
+		Blanks:          blanks,
 	}
 }
 
 func init() {
 	rootCmd.AddCommand(canvasCmd)
-	canvasCmd.Flags().StringVarP(&canvasOutput, "output", "o", "", "output zip file path (default: exam name with .zip extension next to the TOML file)")
+	canvasCmd.Flags().StringVarP(&canvasOutput, "output", "o", "", "output zip file path")
 }

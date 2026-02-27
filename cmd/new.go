@@ -14,6 +14,7 @@ import (
 
 var trueFalse bool
 var shortAnswer bool
+var fillInTheBlank bool
 
 var newCmd = &cobra.Command{
 	Use:   "new <file>",
@@ -44,6 +45,8 @@ var newCmd = &cobra.Command{
 			data, err = question.TrueFalseTemplate()
 		} else if shortAnswer {
 			data, err = question.ShortAnswerTemplate()
+		} else if fillInTheBlank {
+			data, err = question.FillInTheBlankTemplate()
 		} else {
 			data, err = question.MultipleChoiceTemplate()
 		}
@@ -63,4 +66,5 @@ func init() {
 	rootCmd.AddCommand(newCmd)
 	newCmd.Flags().BoolVar(&trueFalse, "true-false", false, "create a true/false question template")
 	newCmd.Flags().BoolVar(&shortAnswer, "short-answer", false, "create a short-answer question template")
+	newCmd.Flags().BoolVar(&fillInTheBlank, "fill-in-the-blank", false, "create a fill-in-the-blank question template")
 }
