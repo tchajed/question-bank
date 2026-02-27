@@ -35,9 +35,9 @@ func TestRenderGroup(t *testing.T) {
 
 	out := string(latex)
 	assert.Contains(t, out, `\uplevel{`)
-	assert.Contains(t, out, "fork()")          // group stem
-	assert.Contains(t, out, `\question[1]`)    // part 1
-	assert.Contains(t, out, `\question[2]`)    // part 2 (points = 2)
+	assert.Contains(t, out, "fork()")       // group stem
+	assert.Contains(t, out, `\question[1]`) // part 1
+	assert.Contains(t, out, `\question[2]`) // part 2 (points = 2)
 	assert.Contains(t, out, `\CorrectChoice`)
 	assert.Contains(t, out, `\ifprintanswers`) // explanations present
 	// Group metadata in comment, not in visible text

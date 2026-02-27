@@ -27,19 +27,19 @@ type renderSection struct {
 }
 
 type renderQuestion struct {
-	Id           string
-	Topic        string
-	Difficulty   string
-	Points       int
-	Stem         string
-	Type         string
-	Choices      []question.Choice
-	Answer       string // correct answer for short-answer questions
-	AnswerSpace  string // box size override for short-answer (e.g. "2in"); empty means \defaultanswerlen
+	Id          string
+	Topic       string
+	Difficulty  string
+	Points      int
+	Stem        string
+	Type        string
+	Choices     []question.Choice
+	Answer      string // correct answer for short-answer questions
+	AnswerSpace string // box size override for short-answer (e.g. "2in"); empty means \defaultanswerlen
 	// BlankStem and AnswerStem are pre-rendered stems for fill-in-the-blank
 	// questions, with [name] placeholders replaced by underlines or answers.
-	BlankStem  string
-	AnswerStem string
+	BlankStem    string
+	AnswerStem   string
 	Explanation  string
 	Figure       string // path to figure file (with extension)
 	ShowMetadata bool

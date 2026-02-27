@@ -37,25 +37,25 @@ type ManifestDependency struct {
 
 // AssessmentMeta holds Canvas-specific quiz metadata from assessment_meta.xml.
 type AssessmentMeta struct {
-	XMLName        xml.Name        `xml:"quiz"`
-	Identifier     string          `xml:"identifier,attr"`
-	Title          string          `xml:"title"`
-	Description    string          `xml:"description"`
-	ShuffleAnswers bool            `xml:"shuffle_answers"`
-	QuizType       string          `xml:"quiz_type"`
-	PointsPossible float64         `xml:"points_possible"`
+	XMLName         xml.Name       `xml:"quiz"`
+	Identifier      string         `xml:"identifier,attr"`
+	Title           string         `xml:"title"`
+	Description     string         `xml:"description"`
+	ShuffleAnswers  bool           `xml:"shuffle_answers"`
+	QuizType        string         `xml:"quiz_type"`
+	PointsPossible  float64        `xml:"points_possible"`
 	AllowedAttempts int            `xml:"allowed_attempts"`
-	Assignment     MetaAssignment  `xml:"assignment"`
+	Assignment      MetaAssignment `xml:"assignment"`
 }
 
 // MetaAssignment is the assignment sub-element of AssessmentMeta.
 type MetaAssignment struct {
-	Identifier     string  `xml:"identifier,attr"`
-	Title          string  `xml:"title"`
-	WorkflowState  string  `xml:"workflow_state"`
-	PointsPossible float64 `xml:"points_possible"`
-	GradingType    string  `xml:"grading_type"`
-	SubmissionTypes string `xml:"submission_types"`
+	Identifier      string  `xml:"identifier,attr"`
+	Title           string  `xml:"title"`
+	WorkflowState   string  `xml:"workflow_state"`
+	PointsPossible  float64 `xml:"points_possible"`
+	GradingType     string  `xml:"grading_type"`
+	SubmissionTypes string  `xml:"submission_types"`
 }
 
 // Assessment is the root QTI assessment element in <id>.xml.
@@ -146,9 +146,9 @@ type MatText struct {
 
 // ResponseLid is a response container for single- or multiple-select questions.
 type ResponseLid struct {
-	Ident       string          `xml:"ident,attr"`
-	RCardinality string         `xml:"rcardinality,attr"` // "Single" or "Multiple"
-	Choices     []ResponseLabel `xml:"render_choice>response_label"`
+	Ident        string          `xml:"ident,attr"`
+	RCardinality string          `xml:"rcardinality,attr"` // "Single" or "Multiple"
+	Choices      []ResponseLabel `xml:"render_choice>response_label"`
 }
 
 // ResponseLabel is one answer choice.
@@ -173,9 +173,9 @@ type DecVar struct {
 
 // RespCondition is a conditional scoring rule.
 type RespCondition struct {
-	Continue     string       `xml:"continue,attr"`
-	ConditionVar ConditionVar `xml:"conditionvar"`
-	SetVar       *SetVar      `xml:"setvar"`
+	Continue        string            `xml:"continue,attr"`
+	ConditionVar    ConditionVar      `xml:"conditionvar"`
+	SetVar          *SetVar           `xml:"setvar"`
 	DisplayFeedback []DisplayFeedback `xml:"displayfeedback"`
 }
 
@@ -193,9 +193,9 @@ type ConditionVar struct {
 func (c *ConditionVar) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	// Use a local type to avoid recursion.
 	type conditionVarAlias struct {
-		VarEquals []VarEqual   `xml:"varequal"`
+		VarEquals []VarEqual    `xml:"varequal"`
 		And       *AndCondition `xml:"and"`
-		Other     *struct{}    `xml:"other"`
+		Other     *struct{}     `xml:"other"`
 	}
 	var alias conditionVarAlias
 	if err := d.DecodeElement(&alias, &start); err != nil {
@@ -209,8 +209,8 @@ func (c *ConditionVar) UnmarshalXML(d *xml.Decoder, start xml.StartElement) erro
 
 // AndCondition groups conditions with logical AND (used in multiple_answers_question).
 type AndCondition struct {
-	VarEquals []VarEqual      `xml:"varequal"`
-	Nots      []NotCondition  `xml:"not"`
+	VarEquals []VarEqual     `xml:"varequal"`
+	Nots      []NotCondition `xml:"not"`
 }
 
 // NotCondition wraps a negated condition.

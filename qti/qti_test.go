@@ -110,10 +110,10 @@ func cs537Quiz() *qti.NewQuiz {
 		QuizType:        "assignment",
 		Items: []qti.NewItem{
 			{
-				ID:    "g074cef231ce6afa1ab211121f16dc838",
-				Title: "Uniprocessor",
-				Type:  qti.TrueFalseQuestion,
-				Text:  `<div><p><span>In a uniprocessor system, there can be more than one processes in the READY and BLOCKED states and at most one process in RUNNING state.</span></p></div>`,
+				ID:     "g074cef231ce6afa1ab211121f16dc838",
+				Title:  "Uniprocessor",
+				Type:   qti.TrueFalseQuestion,
+				Text:   `<div><p><span>In a uniprocessor system, there can be more than one processes in the READY and BLOCKED states and at most one process in RUNNING state.</span></p></div>`,
 				Points: 1.0,
 				Choices: []qti.NewChoice{
 					{ID: "8205", Text: "True", Correct: true},
@@ -124,10 +124,10 @@ func cs537Quiz() *qti.NewQuiz {
 				IncorrectFeedback: `<p>Not quite: a uniprocessor system cannot RUN more than one process.</p>`,
 			},
 			{
-				ID:    "geac9ad5e94b1264a4988a21c4a5b0022",
-				Title: "Question",
-				Type:  qti.MultipleChoiceQuestion,
-				Text:  `<div><p class="p1">Which of these is <strong>not</strong> an application benefit of an operating system?</p></div>`,
+				ID:     "geac9ad5e94b1264a4988a21c4a5b0022",
+				Title:  "Question",
+				Type:   qti.MultipleChoiceQuestion,
+				Text:   `<div><p class="p1">Which of these is <strong>not</strong> an application benefit of an operating system?</p></div>`,
 				Points: 1.0,
 				Choices: []qti.NewChoice{
 					{ID: "8321", Text: "A set of simpler abstractions against which to program"},
@@ -137,10 +137,10 @@ func cs537Quiz() *qti.NewQuiz {
 				GeneralFeedback: `<p class="p1">An operating system gives less direct control over the hardware to applications.</p>`,
 			},
 			{
-				ID:    "g0f150c14d07dfa656046e19a7372f0db",
-				Title: "Multiple",
-				Type:  qti.MultipleAnswersQuestion,
-				Text:  `<div><p>You should select A and C for this question.</p></div>`,
+				ID:     "g0f150c14d07dfa656046e19a7372f0db",
+				Title:  "Multiple",
+				Type:   qti.MultipleAnswersQuestion,
+				Text:   `<div><p>You should select A and C for this question.</p></div>`,
 				Points: 1.0,
 				Choices: []qti.NewChoice{
 					{ID: "6295", Text: "A", Correct: true},

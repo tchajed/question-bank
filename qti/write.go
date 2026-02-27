@@ -24,11 +24,11 @@ type NewChoice struct {
 type ItemType string
 
 const (
-	TrueFalseQuestion              ItemType = "true_false_question"
-	MultipleChoiceQuestion         ItemType = "multiple_choice_question"
-	MultipleAnswersQuestion        ItemType = "multiple_answers_question"
-	ShortAnswerQuestion            ItemType = "short_answer_question"
-	FillInMultipleBlanksQuestion   ItemType = "fill_in_multiple_blanks_question"
+	TrueFalseQuestion            ItemType = "true_false_question"
+	MultipleChoiceQuestion       ItemType = "multiple_choice_question"
+	MultipleAnswersQuestion      ItemType = "multiple_answers_question"
+	ShortAnswerQuestion          ItemType = "short_answer_question"
+	FillInMultipleBlanksQuestion ItemType = "fill_in_multiple_blanks_question"
 )
 
 // NewBlank describes one fill-in-the-blank slot.
@@ -61,10 +61,10 @@ type NewItem struct {
 // NewQuiz describes a quiz to create as a Canvas QTI zip file.
 type NewQuiz struct {
 	// ID is the quiz identifier. If empty, a unique ID is assigned.
-	ID             string
-	Title          string
-	Description    string
-	PointsPossible float64
+	ID              string
+	Title           string
+	Description     string
+	PointsPossible  float64
 	AllowedAttempts int
 	// QuizType is the Canvas quiz type (default: "assignment").
 	QuizType string
@@ -254,12 +254,12 @@ type wSection struct {
 }
 
 type wItem struct {
-	Ident        string         `xml:"ident,attr"`
-	Title        string         `xml:"title,attr"`
-	Metadata     wItemMeta      `xml:"itemmetadata"`
-	Presentation wPresentation  `xml:"presentation"`
-	ResProc      wResProc       `xml:"resprocessing"`
-	Feedback     []wItemFB      `xml:"itemfeedback"`
+	Ident        string        `xml:"ident,attr"`
+	Title        string        `xml:"title,attr"`
+	Metadata     wItemMeta     `xml:"itemmetadata"`
+	Presentation wPresentation `xml:"presentation"`
+	ResProc      wResProc      `xml:"resprocessing"`
+	Feedback     []wItemFB     `xml:"itemfeedback"`
 }
 
 type wItemMeta struct {
@@ -392,8 +392,8 @@ type wDisplayFB struct {
 }
 
 type wItemFB struct {
-	Ident   string    `xml:"ident,attr"`
-	FlowMat wFlowMat  `xml:"flow_mat"`
+	Ident   string   `xml:"ident,attr"`
+	FlowMat wFlowMat `xml:"flow_mat"`
 }
 
 type wFlowMat struct {

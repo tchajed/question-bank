@@ -13,6 +13,8 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+      - name: "gofmt"
+        run: go fmt ./... && git diff --exit-code
       - name: "go test"
         run: go test ./...
 
