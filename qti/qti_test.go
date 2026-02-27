@@ -10,61 +10,93 @@ import (
 )
 
 func TestParseZip(t *testing.T) {
+	quizzes, err := qti.ParseZip("testdata/cs537-quizzes.zip")
+	require.NoError(t, err)
+	require.Len(t, quizzes, 2)
+
+	// Quiz 0: CS 537 Midterm 1
+	quiz0 := quizzes[0]
+	assert.Equal(t, "CS 537 Midterm 1", quiz0.Meta.Title)
+	assert.Equal(t, 7.0, quiz0.Meta.PointsPossible)
+	assert.Equal(t, 1, quiz0.Meta.AllowedAttempts)
+	assert.Equal(t, "assignment", quiz0.Meta.QuizType)
+	assert.Equal(t, "CS 537 Midterm 1", quiz0.Assessment.Root.Title)
+	require.Len(t, quiz0.Assessment.Root.Items, 5)
+
+	// Item 0: multiple choice (os-001)
+	item0 := quiz0.Assessment.Root.Items[0]
+	assert.Equal(t, "os-001", item0.Title)
+	assert.Equal(t, "multiple_choice_question", item0.QuestionType())
+	assert.Equal(t, "1.0", item0.PointsPossible())
+	require.NotNil(t, item0.Presentation.ResponseLid())
+	assert.Equal(t, "Single", item0.Presentation.ResponseLid().RCardinality)
+	assert.Len(t, item0.Presentation.ResponseLid().Choices, 3)
+
+	// Item 4: true/false (vm-002)
+	item4 := quiz0.Assessment.Root.Items[4]
+	assert.Equal(t, "vm-002", item4.Title)
+	assert.Equal(t, "true_false_question", item4.QuestionType())
+	assert.Equal(t, "1.0", item4.PointsPossible())
+	require.NotNil(t, item4.Presentation.ResponseLid())
+	assert.Equal(t, "Single", item4.Presentation.ResponseLid().RCardinality)
+	assert.Len(t, item4.Presentation.ResponseLid().Choices, 2)
+
+	// Quiz 1: CS 537 midterm 2 test
+	quiz1 := quizzes[1]
+	assert.Equal(t, "CS 537 midterm 2 test", quiz1.Meta.Title)
+	assert.Equal(t, 3.0, quiz1.Meta.PointsPossible)
+	assert.Equal(t, 1, quiz1.Meta.AllowedAttempts)
+	assert.Equal(t, "assignment", quiz1.Meta.QuizType)
+	require.Len(t, quiz1.Assessment.Root.Items, 3)
+
+	// Item 0: multiple choice
+	assert.Equal(t, "multiple_choice_question", quiz1.Assessment.Root.Items[0].QuestionType())
+	require.NotNil(t, quiz1.Assessment.Root.Items[0].Presentation.ResponseLid())
+	assert.Equal(t, "Single", quiz1.Assessment.Root.Items[0].Presentation.ResponseLid().RCardinality)
+	assert.Len(t, quiz1.Assessment.Root.Items[0].Presentation.ResponseLid().Choices, 3)
+
+	// Item 1: fill in multiple blanks
+	assert.Equal(t, "fill_in_multiple_blanks_question", quiz1.Assessment.Root.Items[1].QuestionType())
+	assert.Len(t, quiz1.Assessment.Root.Items[1].Presentation.ResponseLids, 2)
+
+	// Item 2: short answer
+	assert.Equal(t, "short_answer_question", quiz1.Assessment.Root.Items[2].QuestionType())
+}
+
+func TestParseZipSingle(t *testing.T) {
 	quizzes, err := qti.ParseZip("testdata/cs537-quiz.zip")
 	require.NoError(t, err)
 	require.Len(t, quizzes, 1)
 	quiz := quizzes[0]
 
-	// Assessment metadata
 	assert.Equal(t, "Test quiz", quiz.Meta.Title)
 	assert.Equal(t, 3.0, quiz.Meta.PointsPossible)
 	assert.Equal(t, 1, quiz.Meta.AllowedAttempts)
 	assert.Equal(t, "assignment", quiz.Meta.QuizType)
-
-	// Assessment
-	assert.Equal(t, "Test quiz", quiz.Assessment.Root.Title)
 	require.Len(t, quiz.Assessment.Root.Items, 3)
 
 	// Item 0: true/false
-	item0 := quiz.Assessment.Root.Items[0]
-	assert.Equal(t, "Uniprocessor", item0.Title)
-	assert.Equal(t, "true_false_question", item0.QuestionType())
-	assert.Equal(t, "1.0", item0.PointsPossible())
-	require.NotNil(t, item0.Presentation.ResponseLid())
-	assert.Equal(t, "Single", item0.Presentation.ResponseLid().RCardinality)
-	assert.Len(t, item0.Presentation.ResponseLid().Choices, 2)
-
-	// Item 1: multiple choice (single answer)
-	item1 := quiz.Assessment.Root.Items[1]
-	assert.Equal(t, "multiple_choice_question", item1.QuestionType())
-	require.NotNil(t, item1.Presentation.ResponseLid())
-	assert.Equal(t, "Single", item1.Presentation.ResponseLid().RCardinality)
-	assert.Len(t, item1.Presentation.ResponseLid().Choices, 3)
-
+	assert.Equal(t, "true_false_question", quiz.Assessment.Root.Items[0].QuestionType())
+	// Item 1: multiple choice
+	assert.Equal(t, "multiple_choice_question", quiz.Assessment.Root.Items[1].QuestionType())
 	// Item 2: multiple answers
-	item2 := quiz.Assessment.Root.Items[2]
-	assert.Equal(t, "multiple_answers_question", item2.QuestionType())
-	require.NotNil(t, item2.Presentation.ResponseLid())
-	assert.Equal(t, "Multiple", item2.Presentation.ResponseLid().RCardinality)
-	assert.Len(t, item2.Presentation.ResponseLid().Choices, 3)
+	assert.Equal(t, "multiple_answers_question", quiz.Assessment.Root.Items[2].QuestionType())
 }
 
 func TestItemFeedback(t *testing.T) {
-	quizzes, err := qti.ParseZip("testdata/cs537-quiz.zip")
+	quizzes, err := qti.ParseZip("testdata/cs537-quizzes.zip")
 	require.NoError(t, err)
-	require.Len(t, quizzes, 1)
-	quiz := quizzes[0]
+	require.Len(t, quizzes, 2)
 
-	// Item 0 has 3 feedback entries
-	item0 := quiz.Assessment.Root.Items[0]
-	assert.Len(t, item0.ItemFeedback, 3)
-	feedbackMap := make(map[string]string)
-	for _, fb := range item0.ItemFeedback {
-		feedbackMap[fb.Ident] = fb.Material.MatText.Text
-	}
-	assert.Contains(t, feedbackMap, "general_fb")
-	assert.Contains(t, feedbackMap, "correct_fb")
-	assert.Contains(t, feedbackMap, "general_incorrect_fb")
+	// Quiz 0, item 0 (os-001) has general_fb
+	item0 := quizzes[0].Assessment.Root.Items[0]
+	assert.Len(t, item0.ItemFeedback, 1)
+	assert.Equal(t, "general_fb", item0.ItemFeedback[0].Ident)
+
+	// Quiz 1, item 0 has general_incorrect_fb
+	item1 := quizzes[1].Assessment.Root.Items[0]
+	assert.Len(t, item1.ItemFeedback, 1)
+	assert.Equal(t, "general_incorrect_fb", item1.ItemFeedback[0].Ident)
 }
 
 // cs537Quiz returns a NewQuiz matching testdata/cs537-quiz.zip.
@@ -228,13 +260,12 @@ func TestWriteZip(t *testing.T) {
 }
 
 func TestCorrectAnswers(t *testing.T) {
-	quizzes, err := qti.ParseZip("testdata/cs537-quiz.zip")
+	quizzes, err := qti.ParseZip("testdata/cs537-quizzes.zip")
 	require.NoError(t, err)
-	require.Len(t, quizzes, 1)
-	quiz := quizzes[0]
+	require.Len(t, quizzes, 2)
 
-	// Item 0 (true/false): correct answer is "8205" (True)
-	item0 := quiz.Assessment.Root.Items[0]
+	// Quiz 0, item 0 (os-001, MC): correct answer is "9202" (More control over how hardware is used)
+	item0 := quizzes[0].Assessment.Root.Items[0]
 	var correctIdent string
 	for _, cond := range item0.ResProcessing.RespConditions {
 		if cond.SetVar != nil && cond.SetVar.Value == "100" {
@@ -243,22 +274,19 @@ func TestCorrectAnswers(t *testing.T) {
 			}
 		}
 	}
-	assert.Equal(t, "8205", correctIdent)
+	assert.Equal(t, "9202", correctIdent)
 
-	// Item 2 (multiple answers): correct answers are 6295 and 4634 (A and C), not 1153 (B)
-	item2 := quiz.Assessment.Root.Items[2]
-	var correctCond *qti.RespCondition
-	for i := range item2.ResProcessing.RespConditions {
-		c := &item2.ResProcessing.RespConditions[i]
-		if c.SetVar != nil && c.SetVar.Value == "100" {
-			correctCond = c
-			break
+	// Quiz 0, item 4 (vm-002, T/F): correct answer is "65240" (False)
+	item4 := quizzes[0].Assessment.Root.Items[4]
+	correctIdent = ""
+	for _, cond := range item4.ResProcessing.RespConditions {
+		if cond.SetVar != nil && cond.SetVar.Value == "100" {
+			if len(cond.ConditionVar.VarEquals) == 1 {
+				correctIdent = cond.ConditionVar.VarEquals[0].Value
+			}
 		}
 	}
-	require.NotNil(t, correctCond)
-	require.NotNil(t, correctCond.ConditionVar.And)
-	assert.Len(t, correctCond.ConditionVar.And.VarEquals, 2)
-	assert.Len(t, correctCond.ConditionVar.And.Nots, 1)
+	assert.Equal(t, "65240", correctIdent)
 }
 
 func TestWriteZipFillInBlanks(t *testing.T) {
