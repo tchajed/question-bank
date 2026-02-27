@@ -23,9 +23,10 @@ type NewChoice struct {
 type ItemType string
 
 const (
-	TrueFalseQuestion     ItemType = "true_false_question"
+	TrueFalseQuestion      ItemType = "true_false_question"
 	MultipleChoiceQuestion  ItemType = "multiple_choice_question"
 	MultipleAnswersQuestion ItemType = "multiple_answers_question"
+	ShortAnswerQuestion     ItemType = "short_answer_question"
 )
 
 // NewItem describes a single quiz question to create.
@@ -44,6 +45,8 @@ type NewItem struct {
 	GeneralFeedback   string
 	CorrectFeedback   string
 	IncorrectFeedback string
+	// Answer is the correct answer text for ShortAnswerQuestion.
+	Answer string
 }
 
 // NewQuiz describes a quiz to create as a Canvas QTI zip file.
@@ -231,8 +234,9 @@ type wItemMeta struct {
 }
 
 type wPresentation struct {
-	Material    wMaterial    `xml:"material"`
-	ResponseLid wResponseLid `xml:"response_lid"`
+	Material    wMaterial     `xml:"material"`
+	ResponseLid *wResponseLid `xml:"response_lid"`
+	ResponseStr *wResponseStr `xml:"response_str"`
 }
 
 type wMaterial struct {
@@ -257,6 +261,22 @@ type wRenderChoice struct {
 type wResponseLabel struct {
 	Ident    string    `xml:"ident,attr"`
 	Material wMaterial `xml:"material"`
+}
+
+// wResponseStr is the response container for short-answer (fill-in-the-blank) questions.
+type wResponseStr struct {
+	Ident        string     `xml:"ident,attr"`
+	RCardinality string     `xml:"rcardinality,attr"`
+	RenderFib    wRenderFib `xml:"render_fib"`
+}
+
+type wRenderFib struct {
+	Label wFibLabel `xml:"response_label"`
+}
+
+type wFibLabel struct {
+	Ident    string `xml:"ident,attr"`
+	RShuffle string `xml:"rshuffle,attr"`
 }
 
 type wResProc struct {
@@ -313,6 +333,7 @@ func (c wCondVar) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
 
 type wVarEqual struct {
 	RespIdent string `xml:"respident,attr"`
+	Case      string `xml:"case,attr,omitempty"`
 	Value     string `xml:",chardata"`
 }
 
@@ -420,20 +441,30 @@ func buildItem(item *NewItem) wItem {
 		feedbacks = append(feedbacks, wFeedback("general_incorrect_fb", item.IncorrectFeedback))
 	}
 
+	presentation := wPresentation{
+		Material: wMaterial{MatText: wMatText{TextType: "text/html", Text: item.Text}},
+	}
+	if item.Type == ShortAnswerQuestion {
+		presentation.ResponseStr = &wResponseStr{
+			Ident:        "response1",
+			RCardinality: "Single",
+			RenderFib:    wRenderFib{Label: wFibLabel{Ident: "answer1", RShuffle: "No"}},
+		}
+	} else {
+		presentation.ResponseLid = &wResponseLid{
+			Ident:        "response1",
+			RCardinality: rcard,
+			RenderChoice: wRenderChoice{Labels: labels},
+		}
+	}
+
 	return wItem{
-		Ident:    id,
-		Title:    item.Title,
-		Metadata: wItemMeta{QtiMeta: wQtiMeta{Fields: fields}},
-		Presentation: wPresentation{
-			Material: wMaterial{MatText: wMatText{TextType: "text/html", Text: item.Text}},
-			ResponseLid: wResponseLid{
-				Ident:        "response1",
-				RCardinality: rcard,
-				RenderChoice: wRenderChoice{Labels: labels},
-			},
-		},
-		ResProc:  buildResProc(item, choices),
-		Feedback: feedbacks,
+		Ident:        id,
+		Title:        item.Title,
+		Metadata:     wItemMeta{QtiMeta: wQtiMeta{Fields: fields}},
+		Presentation: presentation,
+		ResProc:      buildResProc(item, choices),
+		Feedback:     feedbacks,
 	}
 }
 
@@ -444,6 +475,15 @@ func buildResProc(item *NewItem, choices []NewChoice) wResProc {
 	var conds []wRespCond
 
 	switch item.Type {
+	case ShortAnswerQuestion:
+		if item.Answer != "" {
+			conds = append(conds, wRespCond{
+				Continue:     "No",
+				ConditionVar: wCondVar{varEquals: []wVarEqual{{RespIdent: "response1", Case: "No", Value: item.Answer}}},
+				SetVar:       &wSetVar{VarName: "SCORE", Action: "Set", Value: "100"},
+			})
+		}
+
 	case TrueFalseQuestion, MultipleChoiceQuestion:
 		var correctID string
 		for _, c := range choices {
