@@ -1,0 +1,9 @@
+title = "Grading Test Exam"
+
+[[sections]]
+name = "Operating Systems"
+questions = ["os-001", "processes-001"]
+
+[[sections]]
+name = "Virtual Memory"
+questions = ["vm-001", "vm-002", "vm-003", "vm-004"]

@@ -235,10 +235,10 @@ Start with separate files; merging can be added later.
 
 Add a `scantron` command group with three subcommands:
 
-### `qb scantron reorder`
+### `question-bank scantron reorder`
 
 ```
-qb scantron reorder [flags] <results.csv>
+question-bank scantron reorder [flags] <results.csv>
 
 Flags:
   --canonical <exam.toml>        Exam file for the canonical question order
@@ -248,7 +248,7 @@ Flags:
 
 Example:
 ```bash
-qb scantron reorder \
+question-bank scantron reorder \
   --canonical exams/midterm1-v1.toml \
   --version B=exams/midterm1-v2.toml \
   results.csv -o reordered.csv
@@ -256,10 +256,10 @@ qb scantron reorder \
 
 Students with `SpecialCodes` not matching any `--version` flag are assumed to be canonical order (identity permutation). So the canonical version's code doesn't need to be mapped explicitly.
 
-### `qb scantron sheets`
+### `question-bank scantron sheets`
 
 ```
-qb scantron sheets [flags] <reordered.csv>
+question-bank scantron sheets [flags] <reordered.csv>
 
 Flags:
   --exam <exam.toml>     Canonical exam file
@@ -268,10 +268,10 @@ Flags:
 
 Reads the reordered CSV, loads the exam + bank, renders one PDF per student.
 
-### `qb scantron analysis`
+### `question-bank scantron analysis`
 
 ```
-qb scantron analysis [flags] <reordered.csv>
+question-bank scantron analysis [flags] <reordered.csv>
 
 Flags:
   --exam <exam.toml>     Canonical exam file
@@ -327,4 +327,4 @@ The item analysis JSON output is designed to be consumed by a future report gene
 - Flag questions with poor discrimination (flat or inverted quintile curves)
 - Flag distractors that no one chose
 
-This can be a `qb scantron report` subcommand that reads the JSON output and produces a LaTeX/PDF report.
+This can be a `question-bank scantron report` subcommand that reads the JSON output and produces a LaTeX/PDF report.

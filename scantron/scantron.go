@@ -77,11 +77,15 @@ func ParseCSV(r io.Reader) (*ScantronData, error) {
 				responses[i] = 0
 				continue
 			}
-			v, err := strconv.Atoi(val)
-			if err != nil {
-				return nil, fmt.Errorf("parsing response for question %d: %w", i+1, err)
+			if val == "*" {
+				responses[i] = 0
+			} else {
+				v, err := strconv.Atoi(val)
+				if err != nil {
+					return nil, fmt.Errorf("parsing response for question %d: %w", i+1, err)
+				}
+				responses[i] = v
 			}
-			responses[i] = v
 		}
 
 		records = append(records, &StudentRecord{
@@ -89,7 +93,7 @@ func ParseCSV(r io.Reader) (*ScantronData, error) {
 			FirstName:    row[1],
 			MI:           row[2],
 			ID:           row[3],
-			SpecialCodes: row[4],
+			SpecialCodes: strings.TrimSpace(row[4]),
 			TotalScore:   totalScore,
 			TotalPct:     totalPct,
 			Responses:    responses,

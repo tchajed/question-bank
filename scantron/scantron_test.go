@@ -48,6 +48,15 @@ func TestParseCSVBlankResponse(t *testing.T) {
 	assert.Equal(t, []int{1, 0}, data.Records[0].Responses)
 }
 
+func TestParseCSVStarResponse(t *testing.T) {
+	csv := `"LastName","FirstName","MI","ID","SpecialCodes","TotalScore","TOTALPCT","_1","_2","_3"
+"Doe","Jane","","2001","A","50","50","1","*","3"
+`
+	data, err := ParseCSV(strings.NewReader(csv))
+	require.NoError(t, err)
+	assert.Equal(t, []int{1, 0, 3}, data.Records[0].Responses)
+}
+
 func TestWriteCSV(t *testing.T) {
 	data := &ScantronData{
 		NumQuestions: 2,

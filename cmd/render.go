@@ -13,7 +13,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/tchajed/question-bank/exam"
-	"github.com/tchajed/question-bank/question"
 )
 
 var renderOutput string
@@ -35,31 +34,13 @@ only the LaTeX source file instead (useful for debugging).`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		examPath := args[0]
 
-		absExamPath, err := filepath.Abs(examPath)
+		e, resolved, absBankDir, err := loadAndResolve(examPath, bankDir)
 		if err != nil {
 			return err
 		}
+
+		absExamPath, _ := filepath.Abs(examPath)
 		examDir := filepath.Dir(absExamPath)
-
-		absBankDir, err := filepath.Abs(bankDir)
-		if err != nil {
-			return err
-		}
-
-		e, err := exam.LoadWithDefaults(absExamPath)
-		if err != nil {
-			return fmt.Errorf("loading exam: %w", err)
-		}
-
-		bank, err := question.LoadBank(absBankDir)
-		if err != nil {
-			return fmt.Errorf("loading bank: %w", err)
-		}
-
-		resolved, err := e.Resolve(bank)
-		if err != nil {
-			return fmt.Errorf("resolving questions: %w", err)
-		}
 
 		latex, err := e.Render(resolved, absBankDir, exam.RenderOptions{
 			PrintAnswers: renderSolution,
