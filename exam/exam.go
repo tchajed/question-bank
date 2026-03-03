@@ -172,6 +172,24 @@ func mergeGroupParts(items []question.BankItem, bank question.Bank) []question.B
 	return result
 }
 
+// FlattenQuestions returns all questions in order, expanding groups into
+// individual parts. This produces the flat numbering that corresponds to
+// scantron question numbers.
+func (r *ResolvedExam) FlattenQuestions() []*question.Question {
+	var result []*question.Question
+	for _, sec := range r.Sections {
+		for _, item := range sec.Items {
+			switch v := item.(type) {
+			case *question.Question:
+				result = append(result, v)
+			case *question.QuestionGroup:
+				result = append(result, v.Parts...)
+			}
+		}
+	}
+	return result
+}
+
 // Resolve looks up every question ID in the bank and returns a ResolvedExam.
 // Consecutive IDs that are parts of the same group are merged into a single
 // QuestionGroup so they render together under a shared \uplevel preamble.
