@@ -15,6 +15,9 @@ import (
 //go:embed exam.tmpl
 var examTemplate string
 
+//go:embed student_header.tmpl
+var studentHeaderTemplate string
+
 // sectionItem is implemented by renderQuestion and renderGroup. Each produces
 // its own LaTeX output via renderTeX.
 type sectionItem interface {
@@ -56,7 +59,8 @@ type StudentResponse struct {
 	Name      string // "LastName, FirstName"
 	ID        string
 	Responses []int // 1-based answer per question (0 = no response)
-	Score     float64
+	Earned    int   // points earned
+	Total     int   // total points possible
 }
 
 // isStandaloneTexFile reports whether the .tex file at path uses
@@ -166,13 +170,13 @@ func (q *renderQuestion) renderTeX() string {
 				idx := i + 1 // 1-based
 				if idx == correctIdx && idx == studentChoice {
 					// Student chose the correct answer
-					fmt.Fprintf(&sb, "  \\choice \\correctchoice{%s}\n", c.Text)
+					fmt.Fprintf(&sb, "  \\choice \\correctmark{%s}\n", c.Text)
 				} else if idx == correctIdx {
 					// This is the correct answer (student chose wrong or no response)
-					fmt.Fprintf(&sb, "  \\choice \\correctchoice{%s}\n", c.Text)
+					fmt.Fprintf(&sb, "  \\choice \\correctmark{%s}\n", c.Text)
 				} else if idx == studentChoice {
 					// Student chose this wrong answer
-					fmt.Fprintf(&sb, "  \\choice \\wrongchoice{%s}\n", c.Text)
+					fmt.Fprintf(&sb, "  \\choice \\wrongmark{%s}\n", c.Text)
 				} else {
 					fmt.Fprintf(&sb, "  \\choice %s\n", c.Text)
 				}
@@ -399,8 +403,8 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 // studentSheetPreamble is injected into the preamble for student feedback sheets.
 // It defines xcolor-based commands for marking correct and wrong answers.
 const studentSheetPreamble = `\usepackage{xcolor}
-\newcommand{\correctchoice}[1]{\colorbox{green!30}{#1}}
-\newcommand{\wrongchoice}[1]{\colorbox{red!30}{#1}}`
+\newcommand{\correctmark}[1]{\colorbox{green!30}{#1}}
+\newcommand{\wrongmark}[1]{\colorbox{red!30}{#1}}`
 
 // RenderStudentSheet renders a personalized exam sheet for one student.
 // The exam is rendered with the student's answers color-coded: correct
@@ -465,15 +469,24 @@ func (e *Exam) RenderStudentSheet(resolved *ResolvedExam, bankDir string, studen
 	}
 
 	// Build the student header as cover page content.
-	coverPage := fmt.Sprintf(`\noindent
-{\Large\textbf{%s: %s}}\\[5pt]
-{\large %s}\\[0.5cm]
-
-\noindent
-\textbf{Name:} %s\\
-\textbf{ID:} %s\\
-\textbf{Score:} %.1f%%
-`, e.CourseCode, e.Title, e.Semester, student.Name, student.ID, student.Score)
+	var pct float64
+	if student.Total > 0 {
+		pct = float64(student.Earned) / float64(student.Total) * 100
+	}
+	headerData := struct {
+		Exam    *Exam
+		Student StudentResponse
+		Pct     float64
+	}{e, student, pct}
+	headerTmpl, err := template.New("student_header").Delims("<<", ">>").Parse(studentHeaderTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("parsing student header template: %w", err)
+	}
+	var headerBuf bytes.Buffer
+	if err := headerTmpl.Execute(&headerBuf, headerData); err != nil {
+		return nil, fmt.Errorf("executing student header template: %w", err)
+	}
+	coverPage := headerBuf.String()
 
 	// Combine the existing preamble with student sheet commands.
 	preamble := strings.TrimSpace(e.Preamble)

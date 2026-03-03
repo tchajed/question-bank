@@ -180,25 +180,26 @@ func TestRenderStudentSheetCorrectChoice(t *testing.T) {
 		Name:      "Smith, Alice",
 		ID:        "1001",
 		Responses: []int{3},
-		Score:     100.0,
+		Earned:    1,
+		Total:     1,
 	}
 
 	latex, err := e.RenderStudentSheet(resolved, bankDir, student)
 	require.NoError(t, err)
 
 	out := string(latex)
-	// The correct choice should be marked with \correctchoice{}
-	assert.Contains(t, out, `\correctchoice{`)
-	// Should not have any \wrongchoice{}
-	assert.NotContains(t, out, `\wrongchoice{`)
+	// The correct choice should be marked with \correctmark{}
+	assert.Contains(t, out, `\correctmark{`)
+	// Should not have any \wrongmark{}
+	assert.NotContains(t, out, `\wrongmark{`)
 	// Student header should appear
 	assert.Contains(t, out, "Smith, Alice")
 	assert.Contains(t, out, "1001")
-	assert.Contains(t, out, "100.0")
+	assert.Contains(t, out, `1 / 1 (100\%)`)
 	// Preamble should include xcolor
 	assert.Contains(t, out, `\usepackage{xcolor}`)
-	assert.Contains(t, out, `\newcommand{\correctchoice}`)
-	assert.Contains(t, out, `\newcommand{\wrongchoice}`)
+	assert.Contains(t, out, `\newcommand{\correctmark}`)
+	assert.Contains(t, out, `\newcommand{\wrongmark}`)
 	// Should NOT contain \CorrectChoice (exam class command) since we are in student mode
 	assert.NotContains(t, out, `\CorrectChoice`)
 }
@@ -224,7 +225,8 @@ func TestRenderStudentSheetWrongChoice(t *testing.T) {
 		Name:      "Jones, Bob",
 		ID:        "1002",
 		Responses: []int{1},
-		Score:     0.0,
+		Earned:    0,
+		Total:     1,
 	}
 
 	latex, err := e.RenderStudentSheet(resolved, bankDir, student)
@@ -232,8 +234,8 @@ func TestRenderStudentSheetWrongChoice(t *testing.T) {
 
 	out := string(latex)
 	// Should have both correct and wrong markings
-	assert.Contains(t, out, `\correctchoice{`)
-	assert.Contains(t, out, `\wrongchoice{`)
+	assert.Contains(t, out, `\correctmark{`)
+	assert.Contains(t, out, `\wrongmark{`)
 }
 
 func TestRenderStudentSheetNoResponse(t *testing.T) {
@@ -257,7 +259,8 @@ func TestRenderStudentSheetNoResponse(t *testing.T) {
 		Name:      "Lee, Carol",
 		ID:        "1003",
 		Responses: []int{0},
-		Score:     0.0,
+		Earned:    0,
+		Total:     1,
 	}
 
 	latex, err := e.RenderStudentSheet(resolved, bankDir, student)
@@ -265,9 +268,9 @@ func TestRenderStudentSheetNoResponse(t *testing.T) {
 
 	out := string(latex)
 	// Correct answer should still be highlighted
-	assert.Contains(t, out, `\correctchoice{`)
+	assert.Contains(t, out, `\correctmark{`)
 	// No wrong choice since no response was given
-	assert.NotContains(t, out, `\wrongchoice{`)
+	assert.NotContains(t, out, `\wrongmark{`)
 }
 
 func TestRenderStudentSheetShortAnswer(t *testing.T) {
@@ -293,7 +296,8 @@ func TestRenderStudentSheetShortAnswer(t *testing.T) {
 		Name:      "Doe, Jane",
 		ID:        "1004",
 		Responses: []int{3, 0},
-		Score:     50.0,
+		Earned:    1,
+		Total:     2,
 	}
 
 	latex, err := e.RenderStudentSheet(resolved, bankDir, student)
@@ -301,7 +305,7 @@ func TestRenderStudentSheetShortAnswer(t *testing.T) {
 
 	out := string(latex)
 	// MC question should have student marking
-	assert.Contains(t, out, `\correctchoice{`)
+	assert.Contains(t, out, `\correctmark{`)
 	// Short-answer question should render with its normal \makeemptybox
 	assert.Contains(t, out, `\makeemptybox{`)
 }
@@ -329,7 +333,8 @@ func TestRenderStudentSheetMultipleQuestions(t *testing.T) {
 		Name:      "Test, Student",
 		ID:        "9999",
 		Responses: []int{1, 2},
-		Score:     50.0,
+		Earned:    1,
+		Total:     2,
 	}
 
 	latex, err := e.RenderStudentSheet(resolved, bankDir, student)
@@ -337,8 +342,8 @@ func TestRenderStudentSheetMultipleQuestions(t *testing.T) {
 
 	out := string(latex)
 	// Both correct and wrong markings should appear (one of each from each question)
-	assert.Contains(t, out, `\correctchoice{`)
-	assert.Contains(t, out, `\wrongchoice{`)
+	assert.Contains(t, out, `\correctmark{`)
+	assert.Contains(t, out, `\wrongmark{`)
 	// Both sections should be rendered
 	assert.Contains(t, out, `\section*{VM}`)
 }
@@ -364,7 +369,8 @@ func TestRenderStudentSheetGroup(t *testing.T) {
 		Name:      "Group, Test",
 		ID:        "5555",
 		Responses: []int{1, 1},
-		Score:     50.0,
+		Earned:    1,
+		Total:     2,
 	}
 
 	latex, err := e.RenderStudentSheet(resolved, bankDir, student)
@@ -374,7 +380,7 @@ func TestRenderStudentSheetGroup(t *testing.T) {
 	// Group stem should be present
 	assert.Contains(t, out, "fork()")
 	// Student response marking should be present
-	assert.Contains(t, out, `\correctchoice{`)
+	assert.Contains(t, out, `\correctmark{`)
 }
 
 func TestRenderStudentSheetResponseMismatch(t *testing.T) {
@@ -398,7 +404,8 @@ func TestRenderStudentSheetResponseMismatch(t *testing.T) {
 		Name:      "Bad, Data",
 		ID:        "0000",
 		Responses: []int{1, 2, 3},
-		Score:     0.0,
+		Earned:    0,
+		Total:     0,
 	}
 
 	_, err = e.RenderStudentSheet(resolved, bankDir, student)

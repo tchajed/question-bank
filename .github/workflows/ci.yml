@@ -50,3 +50,5 @@ jobs:
         run: go build -o question-bank .
       - name: Render exam
         run: ./question-bank render --bank testdata/bank -o /tmp/exam.pdf testdata/exams/exam.toml
+      - name: Render student sheets
+        run: ./question-bank scantron sheets testdata/scantron/grades.csv --exam testdata/exams/grading-exam.toml --bank testdata/bank -o /tmp/sheets

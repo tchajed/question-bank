@@ -88,16 +88,12 @@ The CSV should already be in canonical question order (output of "qb scantron re
 				return fmt.Errorf("grading student %s: %w", rec.ID, err)
 			}
 
-			var score float64
-			if graded.NumTotal > 0 {
-				score = float64(graded.NumCorrect) / float64(graded.NumTotal) * 100
-			}
-
 			student := exam.StudentResponse{
 				Name:      fmt.Sprintf("%s, %s", rec.LastName, rec.FirstName),
 				ID:        rec.ID,
 				Responses: rec.Responses,
-				Score:     score,
+				Earned:    graded.NumCorrect,
+				Total:     graded.NumTotal,
 			}
 
 			latex, err := e.RenderStudentSheet(resolved, absBankDir, student)
