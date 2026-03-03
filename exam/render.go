@@ -403,8 +403,8 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 // studentSheetPreamble is injected into the preamble for student feedback sheets.
 // It defines xcolor-based commands for marking correct and wrong answers.
 const studentSheetPreamble = `\usepackage{xcolor}
-\newcommand{\correctmark}[1]{\colorbox{green!30}{#1}}
-\newcommand{\wrongmark}[1]{\colorbox{red!30}{#1}}`
+\newcommand{\correctmark}[1]{\textcolor{green!40!black}{\textbf{#1}}}
+\newcommand{\wrongmark}[1]{\textcolor{red!50!black}{\textbf{#1}}}`
 
 // RenderStudentSheet renders a personalized exam sheet for one student.
 // The exam is rendered with the student's answers color-coded: correct
