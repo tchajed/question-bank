@@ -51,6 +51,9 @@ type renderQuestion struct {
 	// 0 = not in student mode; positive = 1-based student choice index;
 	// -1 = student mode but no response given.
 	StudentResponse int
+	// StudentCorrect indicates whether the student answered correctly.
+	// Only meaningful when StudentResponse != 0.
+	StudentCorrect bool
 }
 
 // StudentResponse describes one student's answers for rendering a
@@ -107,7 +110,17 @@ func (q *renderQuestion) renderTeX() string {
 	}
 	sb.WriteString("\n")
 
+	if q.StudentResponse != 0 {
+		if q.StudentCorrect {
+			sb.WriteString("\\correctqformat\n")
+		} else {
+			sb.WriteString("\\wrongqformat\n")
+		}
+	}
 	fmt.Fprintf(&sb, "\\question[%d]\n", q.Points)
+	if q.StudentResponse != 0 {
+		sb.WriteString("\\defaultqformat\n")
+	}
 	for _, label := range q.Labels {
 		fmt.Fprintf(&sb, "\\label{%s}\n", label)
 	}
@@ -404,7 +417,10 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 // It defines xcolor-based commands for marking correct and wrong answers.
 const studentSheetPreamble = `\usepackage{xcolor}
 \newcommand{\correctmark}[1]{\textcolor{green!40!black}{\textbf{#1}}}
-\newcommand{\wrongmark}[1]{\textcolor{red!50!black}{\textbf{#1}}}`
+\newcommand{\wrongmark}[1]{\textcolor{red!50!black}{\textbf{#1}}}
+\newcommand{\defaultqformat}{\qformat{\textbf{\thequestion.}\enspace(\thepoints)\hfill}}
+\newcommand{\correctqformat}{\qformat{\colorbox{green!30}{\textbf{\thequestion.}}\enspace(\thepoints)\hfill}}
+\newcommand{\wrongqformat}{\qformat{\colorbox{red!30}{\textbf{\thequestion.}}\enspace(\thepoints)\hfill}}`
 
 // RenderStudentSheet renders a personalized exam sheet for one student.
 // The exam is rendered with the student's answers color-coded: correct
@@ -436,6 +452,7 @@ func (e *Exam) RenderStudentSheet(resolved *ResolvedExam, bankDir string, studen
 				// Set student response for MC/TF questions.
 				if idx, ok := questionIndex[v.Id]; ok {
 					rq.StudentResponse = studentResponseValue(v, student.Responses[idx])
+					rq.StudentCorrect = studentIsCorrect(v, student.Responses[idx])
 				}
 				items = append(items, rq)
 				numQuestions++
@@ -458,6 +475,7 @@ func (e *Exam) RenderStudentSheet(resolved *ResolvedExam, bankDir string, studen
 					}
 					if idx, ok := questionIndex[part.Id]; ok {
 						rq.StudentResponse = studentResponseValue(part, student.Responses[idx])
+						rq.StudentCorrect = studentIsCorrect(part, student.Responses[idx])
 					}
 					rg.Parts[j] = rq
 					numQuestions++
@@ -536,4 +554,15 @@ func studentResponseValue(q *question.Question, response int) int {
 		return -1 // no response, but in student mode
 	}
 	return response
+}
+
+// studentIsCorrect reports whether the student's response matches the correct
+// choice for a MC/TF question.
+func studentIsCorrect(q *question.Question, response int) bool {
+	for i, c := range q.Choices {
+		if c.Correct {
+			return response == i+1
+		}
+	}
+	return false
 }
