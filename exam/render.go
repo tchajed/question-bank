@@ -181,11 +181,8 @@ func (q *renderQuestion) renderTeX() string {
 			}
 			for i, c := range q.Choices {
 				idx := i + 1 // 1-based
-				if idx == correctIdx && idx == studentChoice {
-					// Student chose the correct answer
-					fmt.Fprintf(&sb, "  \\choice \\correctmark{%s}\n", c.Text)
-				} else if idx == correctIdx {
-					// This is the correct answer (student chose wrong or no response)
+				if idx == correctIdx {
+					// Always highlight the correct answer
 					fmt.Fprintf(&sb, "  \\choice \\correctmark{%s}\n", c.Text)
 				} else if idx == studentChoice {
 					// Student chose this wrong answer
@@ -339,9 +336,10 @@ func buildRenderQuestion(q *question.Question, bankDir string, showMetadata bool
 	}
 }
 
-// Render generates a LaTeX document for the exam. bankDir is used to compute
-// absolute figure paths.
-func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions) ([]byte, error) {
+// buildSections constructs renderSection slices from a resolved exam.
+// studentResponses, when non-nil, maps question ID to the student's 1-based
+// response (0 = no response) for student sheet rendering.
+func buildSections(resolved *ResolvedExam, bankDir string, showMetadata bool, studentResponses map[string]int) ([]renderSection, int) {
 	numQuestions := 0
 	sections := make([]renderSection, len(resolved.Sections))
 	for i, sec := range resolved.Sections {
@@ -349,7 +347,9 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 		for _, item := range sec.Items {
 			switch v := item.(type) {
 			case *question.Question:
-				items = append(items, buildRenderQuestion(v, bankDir, opts.ShowMetadata, ""))
+				rq := buildRenderQuestion(v, bankDir, showMetadata, "")
+				annotateStudentResponse(rq, v, studentResponses)
+				items = append(items, rq)
 				numQuestions++
 			case *question.QuestionGroup:
 				rg := &renderGroup{
@@ -358,17 +358,18 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 					Difficulty:   string(v.Difficulty),
 					Stem:         markdownToTeX(replaceGroupRefs(v.Stem, v.Id)),
 					Figure:       figurePath(v.Figure, bankDir),
-					ShowMetadata: opts.ShowMetadata,
+					ShowMetadata: showMetadata,
 					Parts:        make([]*renderQuestion, len(v.Parts)),
 				}
 				for j, part := range v.Parts {
-					rq := buildRenderQuestion(part, bankDir, opts.ShowMetadata, v.Id)
+					rq := buildRenderQuestion(part, bankDir, showMetadata, v.Id)
 					if j == 0 {
 						rq.Labels = append(rq.Labels, v.Id+":first")
 					}
 					if j == len(v.Parts)-1 {
 						rq.Labels = append(rq.Labels, v.Id+":last")
 					}
+					annotateStudentResponse(rq, part, studentResponses)
 					rg.Parts[j] = rq
 					numQuestions++
 				}
@@ -377,24 +378,26 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 		}
 		sections[i] = renderSection{Name: sec.Name, Items: items}
 	}
+	return sections, numQuestions
+}
 
-	// Normalize CoverPage: ensure it ends with exactly one newline.
-	coverPage := strings.TrimRight(e.CoverPage, " \t\n")
-	if coverPage != "" {
-		coverPage += "\n"
+// annotateStudentResponse sets StudentResponse and StudentCorrect on rq
+// if studentResponses is non-nil and contains the question's ID.
+func annotateStudentResponse(rq *renderQuestion, q *question.Question, studentResponses map[string]int) {
+	if studentResponses == nil {
+		return
 	}
-
-	data := &RenderData{
-		CourseCode:   e.CourseCode,
-		Title:        e.Title,
-		Semester:     e.Semester,
-		CoverPage:    coverPage,
-		Preamble:     strings.TrimSpace(e.Preamble),
-		NumQuestions: numQuestions,
-		Sections:     sections,
-		PrintAnswers: opts.PrintAnswers,
+	response, ok := studentResponses[q.Id]
+	if !ok {
+		return
 	}
+	rq.StudentResponse = studentResponseValue(q, response)
+	rq.StudentCorrect = studentIsCorrect(q, response)
+}
 
+// executeExamTemplate parses and executes the exam LaTeX template with the
+// given render data, returning the generated LaTeX source.
+func executeExamTemplate(data *RenderData) ([]byte, error) {
 	funcs := template.FuncMap{
 		"renderItem": func(item sectionItem) (string, error) {
 			return item.renderTeX(), nil
@@ -413,6 +416,29 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 	return buf.Bytes(), nil
 }
 
+// Render generates a LaTeX document for the exam. bankDir is used to compute
+// absolute figure paths.
+func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions) ([]byte, error) {
+	sections, numQuestions := buildSections(resolved, bankDir, opts.ShowMetadata, nil)
+
+	// Normalize CoverPage: ensure it ends with exactly one newline.
+	coverPage := strings.TrimRight(e.CoverPage, " \t\n")
+	if coverPage != "" {
+		coverPage += "\n"
+	}
+
+	return executeExamTemplate(&RenderData{
+		CourseCode:   e.CourseCode,
+		Title:        e.Title,
+		Semester:     e.Semester,
+		CoverPage:    coverPage,
+		Preamble:     strings.TrimSpace(e.Preamble),
+		NumQuestions: numQuestions,
+		Sections:     sections,
+		PrintAnswers: opts.PrintAnswers,
+	})
+}
+
 // studentSheetPreamble is injected into the preamble for student feedback sheets.
 // It defines xcolor-based commands for marking correct and wrong answers.
 const studentSheetPreamble = `\usepackage{xcolor}
@@ -427,7 +453,6 @@ const studentSheetPreamble = `\usepackage{xcolor}
 // choices in green, wrong choices in red, and the correct answer always
 // shown in green.
 func (e *Exam) RenderStudentSheet(resolved *ResolvedExam, bankDir string, student StudentResponse) ([]byte, error) {
-	// Build a flat list of questions so we can index by position.
 	flatQuestions := resolved.FlattenQuestions()
 
 	if len(student.Responses) != len(flatQuestions) {
@@ -435,58 +460,40 @@ func (e *Exam) RenderStudentSheet(resolved *ResolvedExam, bankDir string, studen
 			student.ID, len(student.Responses), len(flatQuestions))
 	}
 
-	// Build the question index: maps question ID to flat position.
-	questionIndex := make(map[string]int, len(flatQuestions))
+	// Build student response map: question ID -> 1-based response.
+	studentResponses := make(map[string]int, len(flatQuestions))
 	for i, q := range flatQuestions {
-		questionIndex[q.Id] = i
+		studentResponses[q.Id] = student.Responses[i]
 	}
 
-	numQuestions := 0
-	sections := make([]renderSection, len(resolved.Sections))
-	for i, sec := range resolved.Sections {
-		var items []sectionItem
-		for _, item := range sec.Items {
-			switch v := item.(type) {
-			case *question.Question:
-				rq := buildRenderQuestion(v, bankDir, false, "")
-				// Set student response for MC/TF questions.
-				if idx, ok := questionIndex[v.Id]; ok {
-					rq.StudentResponse = studentResponseValue(v, student.Responses[idx])
-					rq.StudentCorrect = studentIsCorrect(v, student.Responses[idx])
-				}
-				items = append(items, rq)
-				numQuestions++
-			case *question.QuestionGroup:
-				rg := &renderGroup{
-					Id:         v.Id,
-					Topic:      v.Topic,
-					Difficulty: string(v.Difficulty),
-					Stem:       markdownToTeX(replaceGroupRefs(v.Stem, v.Id)),
-					Figure:     figurePath(v.Figure, bankDir),
-					Parts:      make([]*renderQuestion, len(v.Parts)),
-				}
-				for j, part := range v.Parts {
-					rq := buildRenderQuestion(part, bankDir, false, v.Id)
-					if j == 0 {
-						rq.Labels = append(rq.Labels, v.Id+":first")
-					}
-					if j == len(v.Parts)-1 {
-						rq.Labels = append(rq.Labels, v.Id+":last")
-					}
-					if idx, ok := questionIndex[part.Id]; ok {
-						rq.StudentResponse = studentResponseValue(part, student.Responses[idx])
-						rq.StudentCorrect = studentIsCorrect(part, student.Responses[idx])
-					}
-					rg.Parts[j] = rq
-					numQuestions++
-				}
-				items = append(items, rg)
-			}
-		}
-		sections[i] = renderSection{Name: sec.Name, Items: items}
+	sections, numQuestions := buildSections(resolved, bankDir, false, studentResponses)
+
+	coverPage, err := renderStudentHeader(e, student)
+	if err != nil {
+		return nil, err
 	}
 
-	// Build the student header as cover page content.
+	// Combine the existing preamble with student sheet commands.
+	preamble := strings.TrimSpace(e.Preamble)
+	if preamble != "" {
+		preamble += "\n"
+	}
+	preamble += studentSheetPreamble
+
+	return executeExamTemplate(&RenderData{
+		CourseCode:   e.CourseCode,
+		Title:        e.Title,
+		Semester:     e.Semester,
+		CoverPage:    coverPage,
+		Preamble:     preamble,
+		NumQuestions: numQuestions,
+		Sections:     sections,
+	})
+}
+
+// renderStudentHeader renders the student header template used as cover page
+// content in student sheets.
+func renderStudentHeader(e *Exam, student StudentResponse) (string, error) {
 	var pct float64
 	if student.Total > 0 {
 		pct = float64(student.Earned) / float64(student.Total) * 100
@@ -498,47 +505,13 @@ func (e *Exam) RenderStudentSheet(resolved *ResolvedExam, bankDir string, studen
 	}{e, student, pct}
 	headerTmpl, err := template.New("student_header").Delims("<<", ">>").Parse(studentHeaderTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("parsing student header template: %w", err)
+		return "", fmt.Errorf("parsing student header template: %w", err)
 	}
-	var headerBuf bytes.Buffer
-	if err := headerTmpl.Execute(&headerBuf, headerData); err != nil {
-		return nil, fmt.Errorf("executing student header template: %w", err)
-	}
-	coverPage := headerBuf.String()
-
-	// Combine the existing preamble with student sheet commands.
-	preamble := strings.TrimSpace(e.Preamble)
-	if preamble != "" {
-		preamble += "\n"
-	}
-	preamble += studentSheetPreamble
-
-	data := &RenderData{
-		CourseCode:   e.CourseCode,
-		Title:        e.Title,
-		Semester:     e.Semester,
-		CoverPage:    coverPage,
-		Preamble:     preamble,
-		NumQuestions: numQuestions,
-		Sections:     sections,
-	}
-
-	funcs := template.FuncMap{
-		"renderItem": func(item sectionItem) (string, error) {
-			return item.renderTeX(), nil
-		},
-	}
-
-	tmpl, err := template.New("exam").Delims("<<", ">>").Funcs(funcs).Parse(examTemplate)
-	if err != nil {
-		return nil, fmt.Errorf("parsing template: %w", err)
-	}
-
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
-		return nil, fmt.Errorf("executing template: %w", err)
+	if err := headerTmpl.Execute(&buf, headerData); err != nil {
+		return "", fmt.Errorf("executing student header template: %w", err)
 	}
-	return buf.Bytes(), nil
+	return buf.String(), nil
 }
 
 // studentResponseValue returns the StudentResponse field value for a

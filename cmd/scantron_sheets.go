@@ -14,7 +14,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/tchajed/question-bank/exam"
-	"github.com/tchajed/question-bank/question"
 	"github.com/tchajed/question-bank/scantron"
 )
 
@@ -32,12 +31,7 @@ The CSV should already be in canonical question order (output of "qb scantron re
 	RunE: func(cmd *cobra.Command, args []string) error {
 		csvPath := args[0]
 
-		absExamPath, err := filepath.Abs(sheetsExamPath)
-		if err != nil {
-			return err
-		}
-
-		absBankDir, err := filepath.Abs(bankDir)
+		e, resolved, absBankDir, err := loadAndResolve(sheetsExamPath, bankDir)
 		if err != nil {
 			return err
 		}
@@ -45,22 +39,6 @@ The CSV should already be in canonical question order (output of "qb scantron re
 		absOutputDir, err := filepath.Abs(sheetsOutputDir)
 		if err != nil {
 			return err
-		}
-
-		// Load exam and bank.
-		e, err := exam.LoadWithDefaults(absExamPath)
-		if err != nil {
-			return fmt.Errorf("loading exam: %w", err)
-		}
-
-		bank, err := question.LoadBank(absBankDir)
-		if err != nil {
-			return fmt.Errorf("loading bank: %w", err)
-		}
-
-		resolved, err := e.Resolve(bank)
-		if err != nil {
-			return fmt.Errorf("resolving questions: %w", err)
 		}
 
 		// Parse CSV.

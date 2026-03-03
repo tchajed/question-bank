@@ -6,13 +6,11 @@ package cmd
 import (
 	"encoding/csv"
 	"fmt"
-	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/tchajed/question-bank/exam"
 	"github.com/tchajed/question-bank/question"
 )
 
@@ -25,31 +23,9 @@ var answerKeyCmd = &cobra.Command{
 	Long:  `Output a CSV with question number and answer choice (A, B, C, ...) for each question in the exam.`,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		examPath := args[0]
-
-		absExamPath, err := filepath.Abs(examPath)
+		_, resolved, _, err := loadAndResolve(args[0], bankDir)
 		if err != nil {
 			return err
-		}
-
-		absBankDir, err := filepath.Abs(bankDir)
-		if err != nil {
-			return err
-		}
-
-		e, err := exam.LoadWithDefaults(absExamPath)
-		if err != nil {
-			return fmt.Errorf("loading exam: %w", err)
-		}
-
-		bank, err := question.LoadBank(absBankDir)
-		if err != nil {
-			return fmt.Errorf("loading bank: %w", err)
-		}
-
-		resolved, err := e.Resolve(bank)
-		if err != nil {
-			return fmt.Errorf("resolving questions: %w", err)
 		}
 
 		// Collect all answers
@@ -66,13 +42,7 @@ var answerKeyCmd = &cobra.Command{
 					questions = q.Parts
 				}
 				for _, q := range questions {
-					var answer string
-					var err error
-					if numericAnswerKey {
-						answer, err = answerNumber(q)
-					} else {
-						answer, err = answerLetter(q)
-					}
+					answer, err := answerString(q, numericAnswerKey)
 					if err != nil {
 						return fmt.Errorf("question %s: %w", q.Id, err)
 					}
@@ -125,9 +95,10 @@ func blanksAnswer(q *question.Question) string {
 	return strings.Join(parts, "; ")
 }
 
-// answerLetter returns the answer letter (A, B, C, ...) for a question, or the
-// answer string directly for short-answer and fill-in-the-blank questions.
-func answerLetter(q *question.Question) (string, error) {
+// answerString returns the answer for a question. For MC/TF questions it
+// returns a letter (A, B, C, ...) or a 1-based number depending on numeric.
+// For short-answer and fill-in-the-blank questions it returns the answer text.
+func answerString(q *question.Question, numeric bool) (string, error) {
 	if q.Type == question.ShortAnswer {
 		return q.Answer, nil
 	}
@@ -137,24 +108,11 @@ func answerLetter(q *question.Question) (string, error) {
 	idx := q.CorrectChoiceIndex()
 	if idx == 0 {
 		return "", fmt.Errorf("no correct answer found")
+	}
+	if numeric {
+		return strconv.Itoa(idx), nil
 	}
 	return string(rune('A' + idx - 1)), nil
-}
-
-// answerNumber returns the 1-based answer number for a question, or the answer
-// string directly for short-answer and fill-in-the-blank questions.
-func answerNumber(q *question.Question) (string, error) {
-	if q.Type == question.ShortAnswer {
-		return q.Answer, nil
-	}
-	if q.Type == question.FillInTheBlank {
-		return blanksAnswer(q), nil
-	}
-	idx := q.CorrectChoiceIndex()
-	if idx == 0 {
-		return "", fmt.Errorf("no correct answer found")
-	}
-	return strconv.Itoa(idx), nil
 }
 
 func init() {

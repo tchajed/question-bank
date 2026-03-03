@@ -11,10 +11,20 @@ import (
 	"github.com/tchajed/question-bank/question"
 )
 
-func TestRenderGroup(t *testing.T) {
+// resolveTestExam loads the test bank, resolves the given exam, and returns
+// the resolved exam and absolute bank directory path.
+func resolveTestExam(t *testing.T, e *exam.Exam) (*exam.ResolvedExam, string) {
+	t.Helper()
 	bank, err := question.LoadBank("../testdata/bank")
 	require.NoError(t, err)
+	resolved, err := e.Resolve(bank)
+	require.NoError(t, err)
+	bankDir, err := filepath.Abs("../testdata/bank")
+	require.NoError(t, err)
+	return resolved, bankDir
+}
 
+func TestRenderGroup(t *testing.T) {
 	e := &exam.Exam{
 		Sections: []exam.Section{
 			{
@@ -24,11 +34,7 @@ func TestRenderGroup(t *testing.T) {
 		},
 	}
 
-	resolved, err := e.Resolve(bank)
-	require.NoError(t, err)
-
-	bankDir, err := filepath.Abs("../testdata/bank")
-	require.NoError(t, err)
+	resolved, bankDir := resolveTestExam(t, e)
 
 	latex, err := e.Render(resolved, bankDir, exam.RenderOptions{})
 	require.NoError(t, err)
@@ -54,9 +60,6 @@ func TestRenderGroup(t *testing.T) {
 }
 
 func TestRenderGroupPartSelection(t *testing.T) {
-	bank, err := question.LoadBank("../testdata/bank")
-	require.NoError(t, err)
-
 	e := &exam.Exam{
 		Sections: []exam.Section{
 			{
@@ -66,11 +69,7 @@ func TestRenderGroupPartSelection(t *testing.T) {
 		},
 	}
 
-	resolved, err := e.Resolve(bank)
-	require.NoError(t, err)
-
-	bankDir, err := filepath.Abs("../testdata/bank")
-	require.NoError(t, err)
+	resolved, bankDir := resolveTestExam(t, e)
 
 	latex, err := e.Render(resolved, bankDir, exam.RenderOptions{})
 	require.NoError(t, err)
@@ -86,19 +85,13 @@ func TestRenderGroupPartSelection(t *testing.T) {
 }
 
 func TestRenderGroupShowMetadata(t *testing.T) {
-	bank, err := question.LoadBank("../testdata/bank")
-	require.NoError(t, err)
-
 	e := &exam.Exam{
 		Sections: []exam.Section{
 			{Name: "P", Questions: []string{"processes-group-001/1", "processes-group-001/2"}},
 		},
 	}
-	resolved, err := e.Resolve(bank)
-	require.NoError(t, err)
 
-	bankDir, err := filepath.Abs("../testdata/bank")
-	require.NoError(t, err)
+	resolved, bankDir := resolveTestExam(t, e)
 
 	latex, err := e.Render(resolved, bankDir, exam.RenderOptions{ShowMetadata: true})
 	require.NoError(t, err)
@@ -112,20 +105,13 @@ func TestRenderGroupShowMetadata(t *testing.T) {
 }
 
 func TestRenderTikzFigure(t *testing.T) {
-	bank, err := question.LoadBank("../testdata/bank")
-	require.NoError(t, err)
-
 	e := &exam.Exam{
 		Sections: []exam.Section{
 			{Name: "VM", Questions: []string{"vm-004"}},
 		},
 	}
 
-	resolved, err := e.Resolve(bank)
-	require.NoError(t, err)
-
-	bankDir, err := filepath.Abs("../testdata/bank")
-	require.NoError(t, err)
+	resolved, bankDir := resolveTestExam(t, e)
 
 	latex, err := e.Render(resolved, bankDir, exam.RenderOptions{})
 	require.NoError(t, err)
@@ -138,26 +124,16 @@ func TestRenderTikzFigure(t *testing.T) {
 }
 
 func TestRenderSmoke(t *testing.T) {
-	bank, err := question.LoadBank("../testdata/bank")
-	require.NoError(t, err)
-
 	e, err := exam.LoadWithDefaults("../testdata/exams/exam.toml")
 	require.NoError(t, err)
 
-	resolved, err := e.Resolve(bank)
-	require.NoError(t, err)
-
-	bankDir, err := filepath.Abs("../testdata/bank")
-	require.NoError(t, err)
+	resolved, bankDir := resolveTestExam(t, e)
 
 	_, err = e.Render(resolved, bankDir, exam.RenderOptions{})
 	require.NoError(t, err)
 }
 
 func TestRenderStudentSheetCorrectChoice(t *testing.T) {
-	bank, err := question.LoadBank("../testdata/bank")
-	require.NoError(t, err)
-
 	// Use a simple MC question
 	e := &exam.Exam{
 		CourseCode: "CS 537",
@@ -168,11 +144,7 @@ func TestRenderStudentSheetCorrectChoice(t *testing.T) {
 		},
 	}
 
-	resolved, err := e.Resolve(bank)
-	require.NoError(t, err)
-
-	bankDir, err := filepath.Abs("../testdata/bank")
-	require.NoError(t, err)
+	resolved, bankDir := resolveTestExam(t, e)
 
 	// os-001 has 3 choices, correct is index 3 (1-based: the third choice)
 	// Student chose the correct answer (3)
@@ -205,20 +177,13 @@ func TestRenderStudentSheetCorrectChoice(t *testing.T) {
 }
 
 func TestRenderStudentSheetWrongChoice(t *testing.T) {
-	bank, err := question.LoadBank("../testdata/bank")
-	require.NoError(t, err)
-
 	e := &exam.Exam{
 		Sections: []exam.Section{
 			{Name: "OS", Questions: []string{"os-001"}},
 		},
 	}
 
-	resolved, err := e.Resolve(bank)
-	require.NoError(t, err)
-
-	bankDir, err := filepath.Abs("../testdata/bank")
-	require.NoError(t, err)
+	resolved, bankDir := resolveTestExam(t, e)
 
 	// os-001 correct answer is choice 3 (1-based). Student chose 1 (wrong).
 	student := exam.StudentResponse{
@@ -239,20 +204,13 @@ func TestRenderStudentSheetWrongChoice(t *testing.T) {
 }
 
 func TestRenderStudentSheetNoResponse(t *testing.T) {
-	bank, err := question.LoadBank("../testdata/bank")
-	require.NoError(t, err)
-
 	e := &exam.Exam{
 		Sections: []exam.Section{
 			{Name: "OS", Questions: []string{"os-001"}},
 		},
 	}
 
-	resolved, err := e.Resolve(bank)
-	require.NoError(t, err)
-
-	bankDir, err := filepath.Abs("../testdata/bank")
-	require.NoError(t, err)
+	resolved, bankDir := resolveTestExam(t, e)
 
 	// Student gave no response (0)
 	student := exam.StudentResponse{
@@ -274,9 +232,6 @@ func TestRenderStudentSheetNoResponse(t *testing.T) {
 }
 
 func TestRenderStudentSheetShortAnswer(t *testing.T) {
-	bank, err := question.LoadBank("../testdata/bank")
-	require.NoError(t, err)
-
 	// os-002 is a short-answer question
 	e := &exam.Exam{
 		Sections: []exam.Section{
@@ -284,11 +239,7 @@ func TestRenderStudentSheetShortAnswer(t *testing.T) {
 		},
 	}
 
-	resolved, err := e.Resolve(bank)
-	require.NoError(t, err)
-
-	bankDir, err := filepath.Abs("../testdata/bank")
-	require.NoError(t, err)
+	resolved, bankDir := resolveTestExam(t, e)
 
 	// Two questions: os-001 (MC) and os-002 (short-answer).
 	// Short-answer questions should render normally (not in student mode).
@@ -311,20 +262,13 @@ func TestRenderStudentSheetShortAnswer(t *testing.T) {
 }
 
 func TestRenderStudentSheetMultipleQuestions(t *testing.T) {
-	bank, err := question.LoadBank("../testdata/bank")
-	require.NoError(t, err)
-
 	e := &exam.Exam{
 		Sections: []exam.Section{
 			{Name: "VM", Questions: []string{"vm-001", "vm-003"}},
 		},
 	}
 
-	resolved, err := e.Resolve(bank)
-	require.NoError(t, err)
-
-	bankDir, err := filepath.Abs("../testdata/bank")
-	require.NoError(t, err)
+	resolved, bankDir := resolveTestExam(t, e)
 
 	// vm-001: 3 choices, correct is 1 (4MB)
 	// vm-003: 4 choices, correct is 1
@@ -349,20 +293,13 @@ func TestRenderStudentSheetMultipleQuestions(t *testing.T) {
 }
 
 func TestRenderStudentSheetGroup(t *testing.T) {
-	bank, err := question.LoadBank("../testdata/bank")
-	require.NoError(t, err)
-
 	e := &exam.Exam{
 		Sections: []exam.Section{
 			{Name: "Processes", Questions: []string{"processes-group-001/1", "processes-group-001/2"}},
 		},
 	}
 
-	resolved, err := e.Resolve(bank)
-	require.NoError(t, err)
-
-	bankDir, err := filepath.Abs("../testdata/bank")
-	require.NoError(t, err)
+	resolved, bankDir := resolveTestExam(t, e)
 
 	// Two group parts, both are MC questions
 	student := exam.StudentResponse{
@@ -384,20 +321,13 @@ func TestRenderStudentSheetGroup(t *testing.T) {
 }
 
 func TestRenderStudentSheetResponseMismatch(t *testing.T) {
-	bank, err := question.LoadBank("../testdata/bank")
-	require.NoError(t, err)
-
 	e := &exam.Exam{
 		Sections: []exam.Section{
 			{Name: "OS", Questions: []string{"os-001"}},
 		},
 	}
 
-	resolved, err := e.Resolve(bank)
-	require.NoError(t, err)
-
-	bankDir, err := filepath.Abs("../testdata/bank")
-	require.NoError(t, err)
+	resolved, bankDir := resolveTestExam(t, e)
 
 	// Wrong number of responses
 	student := exam.StudentResponse{
@@ -408,23 +338,16 @@ func TestRenderStudentSheetResponseMismatch(t *testing.T) {
 		Total:     0,
 	}
 
-	_, err = e.RenderStudentSheet(resolved, bankDir, student)
+	_, err := e.RenderStudentSheet(resolved, bankDir, student)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "3 responses but exam has 1 questions")
 }
 
 func TestRender(t *testing.T) {
-	bank, err := question.LoadBank("../testdata/bank")
-	require.NoError(t, err)
-
 	e, err := exam.LoadWithDefaults("../testdata/exams/exam.toml")
 	require.NoError(t, err)
 
-	resolved, err := e.Resolve(bank)
-	require.NoError(t, err)
-
-	bankDir, err := filepath.Abs("../testdata/bank")
-	require.NoError(t, err)
+	resolved, bankDir := resolveTestExam(t, e)
 
 	latex, err := e.Render(resolved, bankDir, exam.RenderOptions{})
 	require.NoError(t, err)
