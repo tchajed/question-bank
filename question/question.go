@@ -166,6 +166,17 @@ func postProcess(q *Question) error {
 // GetId returns the question's unique identifier.
 func (q *Question) GetId() string { return q.Id }
 
+// CorrectChoiceIndex returns the 1-based index of the correct choice.
+// Returns 0 if the question has no choices (short-answer, fill-in-the-blank).
+func (q *Question) CorrectChoiceIndex() int {
+	for i, c := range q.Choices {
+		if c.Correct {
+			return i + 1
+		}
+	}
+	return 0
+}
+
 // Parse parses a Question from TOML-encoded bytes.
 func Parse(data []byte) (*Question, error) {
 	var q Question

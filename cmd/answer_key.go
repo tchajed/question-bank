@@ -134,12 +134,11 @@ func answerLetter(q *question.Question) (string, error) {
 	if q.Type == question.FillInTheBlank {
 		return blanksAnswer(q), nil
 	}
-	for i, c := range q.Choices {
-		if c.Correct {
-			return string(rune('A' + i)), nil
-		}
+	idx := q.CorrectChoiceIndex()
+	if idx == 0 {
+		return "", fmt.Errorf("no correct answer found")
 	}
-	return "", fmt.Errorf("no correct answer found")
+	return string(rune('A' + idx - 1)), nil
 }
 
 // answerNumber returns the 1-based answer number for a question, or the answer
@@ -151,12 +150,11 @@ func answerNumber(q *question.Question) (string, error) {
 	if q.Type == question.FillInTheBlank {
 		return blanksAnswer(q), nil
 	}
-	for i, c := range q.Choices {
-		if c.Correct {
-			return strconv.Itoa(i + 1), nil
-		}
+	idx := q.CorrectChoiceIndex()
+	if idx == 0 {
+		return "", fmt.Errorf("no correct answer found")
 	}
-	return "", fmt.Errorf("no correct answer found")
+	return strconv.Itoa(idx), nil
 }
 
 func init() {
