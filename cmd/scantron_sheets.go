@@ -8,7 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/spf13/cobra"
 	"github.com/tchajed/question-bank/exam"
@@ -81,64 +83,106 @@ The CSV should already be in canonical question order (output of "qb scantron re
 			return fmt.Errorf("creating output directory: %w", err)
 		}
 
-		// Render each student's sheet.
+		// Render each student's sheet in parallel.
+		type job struct {
+			rec    *scantron.StudentRecord
+			graded *scantron.GradedRecord
+		}
+
+		jobs := make(chan job, len(data.Records))
 		for _, rec := range data.Records {
 			graded, err := scantron.Grade(rec, key)
 			if err != nil {
 				return fmt.Errorf("grading student %s: %w", rec.ID, err)
 			}
+			jobs <- job{rec, graded}
+		}
+		close(jobs)
 
-			student := exam.StudentResponse{
-				Name:      fmt.Sprintf("%s, %s", rec.LastName, rec.FirstName),
-				ID:        rec.ID,
-				Responses: rec.Responses,
-				Earned:    graded.NumCorrect,
-				Total:     graded.NumTotal,
+		type result struct {
+			pdfDst      string
+			displayName string
+			err         error
+		}
+		results := make(chan result, len(data.Records))
+
+		var wg sync.WaitGroup
+		numWorkers := runtime.NumCPU()
+		for range numWorkers {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				for j := range jobs {
+					rec, graded := j.rec, j.graded
+					student := exam.StudentResponse{
+						Name:      fmt.Sprintf("%s, %s", rec.LastName, rec.FirstName),
+						ID:        rec.ID,
+						Responses: rec.Responses,
+						Earned:    graded.NumCorrect,
+						Total:     graded.NumTotal,
+					}
+
+					latex, err := e.RenderStudentSheet(resolved, absBankDir, student)
+					if err != nil {
+						results <- result{err: fmt.Errorf("rendering sheet for %s: %w", rec.ID, err)}
+						continue
+					}
+
+					pdfDst, err := compileStudentPDF(latex, rec.ID, absOutputDir)
+					if err != nil {
+						results <- result{err: err}
+						continue
+					}
+
+					displayName := strings.ReplaceAll(student.Name, `\`, "")
+					results <- result{pdfDst: pdfDst, displayName: displayName}
+				}
+			}()
+		}
+
+		go func() {
+			wg.Wait()
+			close(results)
+		}()
+
+		for r := range results {
+			if r.err != nil {
+				return r.err
 			}
-
-			latex, err := e.RenderStudentSheet(resolved, absBankDir, student)
-			if err != nil {
-				return fmt.Errorf("rendering sheet for %s: %w", rec.ID, err)
-			}
-
-			// Compile with latexmk in a temporary directory.
-			tmpDir, err := os.MkdirTemp("", "qb-sheet-*")
-			if err != nil {
-				return fmt.Errorf("creating temp dir: %w", err)
-			}
-
-			texFile := rec.ID + ".tex"
-			texPath := filepath.Join(tmpDir, texFile)
-			if err := os.WriteFile(texPath, latex, 0o644); err != nil {
-				os.RemoveAll(tmpDir)
-				return fmt.Errorf("writing tex file: %w", err)
-			}
-
-			latexmk := exec.Command("latexmk", "-pdf", "-interaction=nonstopmode", texFile)
-			latexmk.Dir = tmpDir
-			out, latexErr := latexmk.CombinedOutput()
-			if latexErr != nil {
-				fmt.Fprintf(cmd.ErrOrStderr(), "%s", out)
-				os.RemoveAll(tmpDir)
-				return fmt.Errorf("latexmk failed for %s: %w", rec.ID, latexErr)
-			}
-
-			pdfSrc := filepath.Join(tmpDir, rec.ID+".pdf")
-			pdfDst := filepath.Join(absOutputDir, rec.ID+".pdf")
-			if err := copyFile(pdfSrc, pdfDst); err != nil {
-				os.RemoveAll(tmpDir)
-				return fmt.Errorf("copying PDF for %s: %w", rec.ID, err)
-			}
-
-			os.RemoveAll(tmpDir)
-
-			// Sanitize student name for display: replace LaTeX escapes
-			displayName := strings.ReplaceAll(student.Name, `\`, "")
-			fmt.Fprintf(cmd.OutOrStdout(), "wrote %s (%s)\n", pdfDst, displayName)
+			fmt.Fprintf(cmd.OutOrStdout(), "wrote %s (%s)\n", r.pdfDst, r.displayName)
 		}
 
 		return nil
 	},
+}
+
+// compileStudentPDF compiles LaTeX source into a PDF via latexmk in a
+// temporary directory, copies the result to outputDir/<id>.pdf, and returns
+// the destination path.
+func compileStudentPDF(latex []byte, id, outputDir string) (string, error) {
+	tmpDir, err := os.MkdirTemp("", "qb-sheet-*")
+	if err != nil {
+		return "", fmt.Errorf("creating temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	texFile := id + ".tex"
+	if err := os.WriteFile(filepath.Join(tmpDir, texFile), latex, 0o644); err != nil {
+		return "", fmt.Errorf("writing tex file: %w", err)
+	}
+
+	latexmk := exec.Command("latexmk", "-pdf", "-interaction=nonstopmode", texFile)
+	latexmk.Dir = tmpDir
+	out, err := latexmk.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("latexmk failed for %s: %w\n%s", id, err, out)
+	}
+
+	pdfDst := filepath.Join(outputDir, id+".pdf")
+	if err := copyFile(filepath.Join(tmpDir, id+".pdf"), pdfDst); err != nil {
+		return "", fmt.Errorf("copying PDF for %s: %w", id, err)
+	}
+	return pdfDst, nil
 }
 
 func init() {
