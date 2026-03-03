@@ -44,6 +44,19 @@ type renderQuestion struct {
 	Figure       string // path to figure file (with extension)
 	ShowMetadata bool
 	Labels       []string // \label{} names attached to this \question
+	// StudentResponse is used in student sheet mode.
+	// 0 = not in student mode; positive = 1-based student choice index;
+	// -1 = student mode but no response given.
+	StudentResponse int
+}
+
+// StudentResponse describes one student's answers for rendering a
+// personalized exam sheet with color-coded feedback.
+type StudentResponse struct {
+	Name      string // "LastName, FirstName"
+	ID        string
+	Responses []int // 1-based answer per question (0 = no response)
+	Score     float64
 }
 
 // isStandaloneTexFile reports whether the .tex file at path uses
@@ -136,11 +149,41 @@ func (q *renderQuestion) renderTeX() string {
 			choicesEnv = "checkboxes"
 		}
 		fmt.Fprintf(&sb, "\\begin{%s}\n", choicesEnv)
-		for _, c := range q.Choices {
-			if c.Correct {
-				fmt.Fprintf(&sb, "  \\CorrectChoice %s\n", c.Text)
-			} else {
-				fmt.Fprintf(&sb, "  \\choice %s\n", c.Text)
+		if q.StudentResponse != 0 {
+			// Student sheet mode: color-code choices based on student's answer.
+			correctIdx := 0 // 1-based index of the correct choice
+			for i, c := range q.Choices {
+				if c.Correct {
+					correctIdx = i + 1
+					break
+				}
+			}
+			studentChoice := q.StudentResponse // -1 means no response
+			if studentChoice == -1 {
+				studentChoice = 0
+			}
+			for i, c := range q.Choices {
+				idx := i + 1 // 1-based
+				if idx == correctIdx && idx == studentChoice {
+					// Student chose the correct answer
+					fmt.Fprintf(&sb, "  \\choice \\correctchoice{%s}\n", c.Text)
+				} else if idx == correctIdx {
+					// This is the correct answer (student chose wrong or no response)
+					fmt.Fprintf(&sb, "  \\choice \\correctchoice{%s}\n", c.Text)
+				} else if idx == studentChoice {
+					// Student chose this wrong answer
+					fmt.Fprintf(&sb, "  \\choice \\wrongchoice{%s}\n", c.Text)
+				} else {
+					fmt.Fprintf(&sb, "  \\choice %s\n", c.Text)
+				}
+			}
+		} else {
+			for _, c := range q.Choices {
+				if c.Correct {
+					fmt.Fprintf(&sb, "  \\CorrectChoice %s\n", c.Text)
+				} else {
+					fmt.Fprintf(&sb, "  \\choice %s\n", c.Text)
+				}
 			}
 		}
 		fmt.Fprintf(&sb, "\\end{%s}\n", choicesEnv)
@@ -351,4 +394,133 @@ func (e *Exam) Render(resolved *ResolvedExam, bankDir string, opts RenderOptions
 		return nil, fmt.Errorf("executing template: %w", err)
 	}
 	return buf.Bytes(), nil
+}
+
+// studentSheetPreamble is injected into the preamble for student feedback sheets.
+// It defines xcolor-based commands for marking correct and wrong answers.
+const studentSheetPreamble = `\usepackage{xcolor}
+\newcommand{\correctchoice}[1]{\colorbox{green!30}{#1}}
+\newcommand{\wrongchoice}[1]{\colorbox{red!30}{#1}}`
+
+// RenderStudentSheet renders a personalized exam sheet for one student.
+// The exam is rendered with the student's answers color-coded: correct
+// choices in green, wrong choices in red, and the correct answer always
+// shown in green.
+func (e *Exam) RenderStudentSheet(resolved *ResolvedExam, bankDir string, student StudentResponse) ([]byte, error) {
+	// Build a flat list of questions so we can index by position.
+	flatQuestions := resolved.FlattenQuestions()
+
+	if len(student.Responses) != len(flatQuestions) {
+		return nil, fmt.Errorf("student %s has %d responses but exam has %d questions",
+			student.ID, len(student.Responses), len(flatQuestions))
+	}
+
+	// Build the question index: maps question ID to flat position.
+	questionIndex := make(map[string]int, len(flatQuestions))
+	for i, q := range flatQuestions {
+		questionIndex[q.Id] = i
+	}
+
+	numQuestions := 0
+	sections := make([]renderSection, len(resolved.Sections))
+	for i, sec := range resolved.Sections {
+		var items []sectionItem
+		for _, item := range sec.Items {
+			switch v := item.(type) {
+			case *question.Question:
+				rq := buildRenderQuestion(v, bankDir, false, "")
+				// Set student response for MC/TF questions.
+				if idx, ok := questionIndex[v.Id]; ok {
+					rq.StudentResponse = studentResponseValue(v, student.Responses[idx])
+				}
+				items = append(items, rq)
+				numQuestions++
+			case *question.QuestionGroup:
+				rg := &renderGroup{
+					Id:         v.Id,
+					Topic:      v.Topic,
+					Difficulty: string(v.Difficulty),
+					Stem:       markdownToTeX(replaceGroupRefs(v.Stem, v.Id)),
+					Figure:     figurePath(v.Figure, bankDir),
+					Parts:      make([]*renderQuestion, len(v.Parts)),
+				}
+				for j, part := range v.Parts {
+					rq := buildRenderQuestion(part, bankDir, false, v.Id)
+					if j == 0 {
+						rq.Labels = append(rq.Labels, v.Id+":first")
+					}
+					if j == len(v.Parts)-1 {
+						rq.Labels = append(rq.Labels, v.Id+":last")
+					}
+					if idx, ok := questionIndex[part.Id]; ok {
+						rq.StudentResponse = studentResponseValue(part, student.Responses[idx])
+					}
+					rg.Parts[j] = rq
+					numQuestions++
+				}
+				items = append(items, rg)
+			}
+		}
+		sections[i] = renderSection{Name: sec.Name, Items: items}
+	}
+
+	// Build the student header as cover page content.
+	coverPage := fmt.Sprintf(`\noindent
+{\Large\textbf{%s: %s}}\\[5pt]
+{\large %s}\\[0.5cm]
+
+\noindent
+\textbf{Name:} %s\\
+\textbf{ID:} %s\\
+\textbf{Score:} %.1f%%
+`, e.CourseCode, e.Title, e.Semester, student.Name, student.ID, student.Score)
+
+	// Combine the existing preamble with student sheet commands.
+	preamble := strings.TrimSpace(e.Preamble)
+	if preamble != "" {
+		preamble += "\n"
+	}
+	preamble += studentSheetPreamble
+
+	data := &RenderData{
+		CourseCode:   e.CourseCode,
+		Title:        e.Title,
+		Semester:     e.Semester,
+		CoverPage:    coverPage,
+		Preamble:     preamble,
+		NumQuestions: numQuestions,
+		Sections:     sections,
+	}
+
+	funcs := template.FuncMap{
+		"renderItem": func(item sectionItem) (string, error) {
+			return item.renderTeX(), nil
+		},
+	}
+
+	tmpl, err := template.New("exam").Delims("<<", ">>").Funcs(funcs).Parse(examTemplate)
+	if err != nil {
+		return nil, fmt.Errorf("parsing template: %w", err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return nil, fmt.Errorf("executing template: %w", err)
+	}
+	return buf.Bytes(), nil
+}
+
+// studentResponseValue returns the StudentResponse field value for a
+// renderQuestion. For MC/TF questions, it converts 0 (no response) to -1
+// and passes through positive values. For other question types (short-answer,
+// fill-in-blank), it returns 0 (not in student mode) since they cannot be
+// graded on a scantron.
+func studentResponseValue(q *question.Question, response int) int {
+	if q.Type != question.MultipleChoice && q.Type != question.TrueFalse {
+		return 0
+	}
+	if response == 0 {
+		return -1 // no response, but in student mode
+	}
+	return response
 }
