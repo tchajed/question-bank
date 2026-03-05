@@ -88,7 +88,7 @@ func TestLoadWithDefaults(t *testing.T) {
 	require.NoError(t, err)
 
 	// Fields from exam.toml
-	assert.Equal(t, "Midterm 1", e.Title)
+	assert.Equal(t, "OS test quiz", e.Title)
 	assert.Equal(t, "Spring 2026", e.Semester)
 
 	// Fields from defaults.toml
