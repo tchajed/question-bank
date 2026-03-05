@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -93,6 +94,9 @@ func examToQuiz(e *exam.Exam, resolved *exam.ResolvedExam) *qti.NewQuiz {
 	var items []qti.NewItem
 	var totalPoints float64
 
+	// questionNum tracks the current Canvas question number (text-only
+	// items don't count as questions in Canvas numbering).
+	questionNum := 1
 	for i, sec := range resolved.Sections {
 		if sec.Name != "" {
 			items = append(items, qti.NewItem{
@@ -104,14 +108,24 @@ func examToQuiz(e *exam.Exam, resolved *exam.ResolvedExam) *qti.NewQuiz {
 		for _, bankItem := range sec.Items {
 			switch v := bankItem.(type) {
 			case *question.Question:
-				item := questionToItem(v, "")
+				item := questionToItem(v)
 				items = append(items, item)
 				totalPoints += item.Points
+				questionNum++
 			case *question.QuestionGroup:
+				firstNum := questionNum
+				lastNum := questionNum + len(v.Parts) - 1
+				groupStem := replaceGroupRefs(v.Stem, firstNum, lastNum)
+				items = append(items, qti.NewItem{
+					Title: v.Id,
+					Text:  exam.MarkdownToHTML(groupStem),
+					Type:  qti.TextNoQuestion,
+				})
 				for _, part := range v.Parts {
-					item := questionToItem(part, v.Stem)
+					item := questionToItem(part)
 					items = append(items, item)
 					totalPoints += item.Points
+					questionNum++
 				}
 			}
 		}
@@ -131,14 +145,23 @@ func examToQuiz(e *exam.Exam, resolved *exam.ResolvedExam) *qti.NewQuiz {
 	}
 }
 
+var latexRefRe = regexp.MustCompile(`\\ref\{[^}]*\}`)
+
+// replaceGroupRefs replaces \ref{GROUP:first} and \ref{GROUP:last} in the
+// group stem with actual question numbers for the Canvas export.
+func replaceGroupRefs(stem string, first, last int) string {
+	stem = strings.ReplaceAll(stem, `\ref{GROUP:first}`, fmt.Sprintf("%d", first))
+	stem = strings.ReplaceAll(stem, `\ref{GROUP:last}`, fmt.Sprintf("%d", last))
+	// Strip any remaining \ref{...} that won't resolve in HTML.
+	stem = latexRefRe.ReplaceAllStringFunc(stem, func(m string) string {
+		return m[len(`\ref{`) : len(m)-1]
+	})
+	return stem
+}
+
 // questionToItem converts a Question to a qti.NewItem.
-// If groupStem is non-empty, it is prepended to the question stem to provide shared context.
-func questionToItem(q *question.Question, groupStem string) qti.NewItem {
-	stem := q.Stem
-	if groupStem != "" {
-		stem = groupStem + "\n\n" + stem
-	}
-	text := exam.MarkdownToHTML(stem)
+func questionToItem(q *question.Question) qti.NewItem {
+	text := exam.MarkdownToHTML(q.Stem)
 
 	var qtype qti.ItemType
 	switch q.Type {
