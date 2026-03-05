@@ -22,6 +22,7 @@ func TestAnswerKey(t *testing.T) {
 5,mutex; 1
 6,A
 7,B
+8,A
 `,
 		},
 		{
@@ -35,13 +36,14 @@ _4,fork()
 _5,mutex; 1
 _6,1
 _7,2
+_8,1
 `,
 		},
 		{
 			name: "row",
 			args: []string{"answer-key", "--row", "-b", "../testdata/bank", "../testdata/exams/exam.toml"},
-			want: `1,2,3,4,5,6,7
-C,A,B,fork(),mutex; 1,A,B
+			want: `1,2,3,4,5,6,7,8
+C,A,B,fork(),mutex; 1,A,B,A
 `,
 		},
 	}

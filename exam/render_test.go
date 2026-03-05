@@ -355,7 +355,7 @@ func TestRender(t *testing.T) {
 	out := string(latex)
 	assert.Contains(t, out, `\documentclass[12pt,addpoints]{exam}`)
 	assert.Contains(t, out, `\newcommand{\ExamCourse}{CS 537\xspace}`)
-	assert.Contains(t, out, `\newcommand{\ExamTitle}{Midterm 1\xspace}`)
+	assert.Contains(t, out, `\newcommand{\ExamTitle}{OS test quiz\xspace}`)
 	assert.Contains(t, out, `\newcommand{\ExamSemester}{Spring 2026\xspace}`)
 	assert.Contains(t, out, `\newcommand{\ExamNumQuestions}{\numquestions\xspace}`)
 	assert.Contains(t, out, `\section*{Operating Systems}`)

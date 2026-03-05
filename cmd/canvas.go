@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"html"
 	"path/filepath"
 	"strings"
 
@@ -131,7 +130,7 @@ func questionToItem(q *question.Question, groupStem string) qti.NewItem {
 	if groupStem != "" {
 		stem = groupStem + "\n\n" + stem
 	}
-	text := "<p>" + html.EscapeString(stem) + "</p>"
+	text := exam.MarkdownToHTML(stem)
 
 	var qtype qti.ItemType
 	switch q.Type {
@@ -165,7 +164,7 @@ func questionToItem(q *question.Question, groupStem string) qti.NewItem {
 
 	var generalFeedback string
 	if q.Explanation != "" {
-		generalFeedback = "<p>" + html.EscapeString(q.Explanation) + "</p>"
+		generalFeedback = exam.MarkdownToHTML(q.Explanation)
 	}
 
 	var blanks map[string]qti.NewBlank
