@@ -20,7 +20,7 @@ func TestParseFile(t *testing.T) {
 	assert.Equal(t, "Concurrency", e.Sections[1].Name)
 	assert.Equal(t, []string{"threads-001", "threads-002"}, e.Sections[1].Questions)
 	assert.Equal(t, "Virtual Memory", e.Sections[2].Name)
-	assert.Equal(t, []string{"vm-001", "vm-002"}, e.Sections[2].Questions)
+	assert.Equal(t, []string{"vm-001", "vm-002", "vm-003"}, e.Sections[2].Questions)
 }
 
 func TestResolve(t *testing.T) {
@@ -48,9 +48,10 @@ func TestResolve(t *testing.T) {
 	assert.Equal(t, "threads-001", resolved.Sections[1].Items[0].GetId())
 	assert.Equal(t, "threads-002", resolved.Sections[1].Items[1].GetId())
 
-	require.Len(t, resolved.Sections[2].Items, 2)
+	require.Len(t, resolved.Sections[2].Items, 3)
 	assert.Equal(t, "vm-001", resolved.Sections[2].Items[0].GetId())
 	assert.Equal(t, "vm-002", resolved.Sections[2].Items[1].GetId())
+	assert.Equal(t, "vm-003", resolved.Sections[2].Items[2].GetId())
 }
 
 func TestResolveMissingQuestion(t *testing.T) {

@@ -1,7 +1,9 @@
 package exam
 
 import (
+	"bytes"
 	"fmt"
+	"html"
 	"strings"
 
 	"github.com/yuin/goldmark"
@@ -10,6 +12,21 @@ import (
 	extast "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/text"
 )
+
+// MarkdownToHTML converts a Markdown string to HTML using goldmark.
+// The table extension is enabled for markdown table support.
+func MarkdownToHTML(md string) string {
+	if md == "" {
+		return ""
+	}
+	src := []byte(strings.TrimSpace(md))
+	var buf bytes.Buffer
+	converter := goldmark.New(goldmark.WithExtensions(extension.Table))
+	if err := converter.Convert(src, &buf); err != nil {
+		return "<p>" + html.EscapeString(strings.TrimSpace(md)) + "</p>"
+	}
+	return strings.TrimSpace(buf.String())
+}
 
 // markdownToTeX converts a Markdown string to LaTeX.
 //

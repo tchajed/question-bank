@@ -1,4 +1,4 @@
-title = "Midterm 1"
+title = "OS test quiz"
 
 [[sections]]
 name = "Operating Systems"
@@ -10,4 +10,4 @@ questions = ["threads-001", "threads-002"]
 
 [[sections]]
 name = "Virtual Memory"
-questions = ["vm-001", "vm-002"]
+questions = ["vm-001", "vm-002", "vm-003"]

@@ -6,6 +6,41 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestMarkdownToHTML(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{"empty", "", ""},
+		{"plain", "plain text", "<p>plain text</p>"},
+		{"bold", "**bold**", "<p><strong>bold</strong></p>"},
+		{"italic", "*italic*", "<p><em>italic</em></p>"},
+		{"code", "`code`", "<p><code>code</code></p>"},
+		{"mixed", "Use **bold** and `code`", "<p>Use <strong>bold</strong> and <code>code</code></p>"},
+		{
+			"fenced code",
+			"```c\nint x = 0;\n```",
+			"<pre><code class=\"language-c\">int x = 0;\n</code></pre>",
+		},
+		{
+			"table",
+			"| A | B |\n|---|---|\n| 1 | 2 |",
+			"<table>\n<thead>\n<tr>\n<th>A</th>\n<th>B</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>1</td>\n<td>2</td>\n</tr>\n</tbody>\n</table>",
+		},
+		{
+			"bold in question",
+			"Which of these is **not** an OS benefit?",
+			"<p>Which of these is <strong>not</strong> an OS benefit?</p>",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, MarkdownToHTML(tt.input))
+		})
+	}
+}
+
 func TestMarkdownToTeX(t *testing.T) {
 	tests := []struct {
 		name  string
