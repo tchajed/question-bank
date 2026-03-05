@@ -1,6 +1,6 @@
 stem = """
 For questions \\ref{GROUP:first}--\\ref{GROUP:last},
-consider this situation: A parent process calls fork(). Both the parent and
+consider this situation: A parent process calls `fork()`. Both the parent and
 child run to completion without any other system calls.
 """
 
