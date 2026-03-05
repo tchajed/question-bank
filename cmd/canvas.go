@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"html"
 	"path/filepath"
 	"strings"
 
@@ -92,7 +93,14 @@ func examToQuiz(e *exam.Exam, resolved *exam.ResolvedExam) *qti.NewQuiz {
 	var items []qti.NewItem
 	var totalPoints float64
 
-	for _, sec := range resolved.Sections {
+	for i, sec := range resolved.Sections {
+		if sec.Name != "" {
+			items = append(items, qti.NewItem{
+				Title: fmt.Sprintf("section-%d", i+1),
+				Text:  "<h2>" + html.EscapeString(sec.Name) + "</h2>",
+				Type:  qti.TextNoQuestion,
+			})
+		}
 		for _, bankItem := range sec.Items {
 			switch v := bankItem.(type) {
 			case *question.Question:

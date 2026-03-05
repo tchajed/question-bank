@@ -29,6 +29,7 @@ const (
 	MultipleAnswersQuestion      ItemType = "multiple_answers_question"
 	ShortAnswerQuestion          ItemType = "short_answer_question"
 	FillInMultipleBlanksQuestion ItemType = "fill_in_multiple_blanks_question"
+	TextNoQuestion               ItemType = "text_only_question"
 )
 
 // NewBlank describes one fill-in-the-blank slot.
@@ -427,6 +428,25 @@ func buildItem(item *NewItem) wItem {
 		id = generateID()
 	}
 	qtype := string(item.Type)
+
+	if item.Type == TextNoQuestion {
+		return wItem{
+			Ident: id,
+			Title: item.Title,
+			Metadata: wItemMeta{QtiMeta: wQtiMeta{Fields: []MetadataField{
+				{Label: "question_type", Entry: qtype},
+				{Label: "points_possible", Entry: "0.0"},
+				{Label: "assessment_question_identifierref", Entry: generateID()},
+			}}},
+			Presentation: wPresentation{
+				Material: wMaterial{MatText: wMatText{TextType: "text/html", Text: item.Text}},
+			},
+			ResProc: wResProc{Outcomes: []wDecVar{
+				{VarName: "SCORE", VarType: "Decimal", MinValue: "0", MaxValue: "100"},
+			}},
+		}
+	}
+
 	rcard := "Single"
 	if item.Type == MultipleAnswersQuestion {
 		rcard = "Multiple"
