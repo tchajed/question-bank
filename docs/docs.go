@@ -1,7 +1,10 @@
 // Package docs provides embedded format reference documentation.
 package docs
 
-import _ "embed"
+import (
+	_ "embed"
+	"strings"
+)
 
 // QuestionFormat is the question format reference documentation.
 //
@@ -12,3 +15,17 @@ var QuestionFormat string
 //
 //go:embed exam-format.md
 var ExamFormat string
+
+// importPromptTemplate is the LLM import prompt template.
+// It contains a {{QUESTION_FORMAT}} placeholder that gets replaced
+// with the actual question format reference.
+//
+//go:embed import-prompt.md
+var importPromptTemplate string
+
+// ImportPrompt returns the full LLM prompt for importing exam content
+// into question-bank TOML files. It composes the prompt template with
+// the question format reference inlined.
+func ImportPrompt() string {
+	return strings.ReplaceAll(importPromptTemplate, "{{QUESTION_FORMAT}}", QuestionFormat)
+}
