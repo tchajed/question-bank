@@ -16,10 +16,20 @@ var docsCmd = &cobra.Command{
 	Long: `Print format reference documentation for the question bank file formats.
 
 Without arguments, prints both the question format and exam format references.
-Pass "question" or "exam" to print only that document.`,
+Pass "question" or "exam" to print only that document.
+
+Use --prompt to output a self-contained LLM prompt that can be fed to any
+coding assistant to help convert existing exam content into question-bank
+TOML files.`,
 	Args:      cobra.MaximumNArgs(1),
 	ValidArgs: []string{"question", "exam"},
 	RunE: func(cmd *cobra.Command, args []string) error {
+		prompt, _ := cmd.Flags().GetBool("prompt")
+		if prompt {
+			fmt.Fprint(cmd.OutOrStdout(), docs.ImportPrompt())
+			return nil
+		}
+
 		if len(args) == 0 {
 			fmt.Fprint(cmd.OutOrStdout(), docs.QuestionFormat)
 			fmt.Fprintln(cmd.OutOrStdout())
@@ -39,5 +49,6 @@ Pass "question" or "exam" to print only that document.`,
 }
 
 func init() {
+	docsCmd.Flags().Bool("prompt", false, "output a self-contained LLM prompt for importing exam content into question-bank TOML files")
 	rootCmd.AddCommand(docsCmd)
 }
