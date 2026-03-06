@@ -115,6 +115,27 @@ func (q *Question) validate() error {
 	return nil
 }
 
+// DeepValidate performs additional validation beyond what validate/postProcess
+// check. It returns a list of warning strings for issues that don't prevent
+// parsing but indicate likely mistakes.
+func (q *Question) DeepValidate() []string {
+	var warnings []string
+	if q.Type == MultipleChoice {
+		correct := 0
+		for _, c := range q.Choices {
+			if c.Correct {
+				correct++
+			}
+		}
+		if correct == 0 {
+			warnings = append(warnings, "multiple-choice question has no correct answer marked")
+		} else if correct > 1 {
+			warnings = append(warnings, fmt.Sprintf("multiple-choice question has %d correct answers marked (expected 1)", correct))
+		}
+	}
+	return warnings
+}
+
 // postProcess validates and normalizes a decoded Question. It is called after
 // TOML decoding, and also after inheriting group metadata for group parts.
 func postProcess(q *Question) error {
