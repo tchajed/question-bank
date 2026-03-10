@@ -26,7 +26,7 @@ For each question in the provided content:
 10. **Short-answer questions**: Use `answer = "..."` with the expected answer.
 11. **Fill-in-the-blank questions**: Use `[blanks.name]` sections with `answers = [...]`. Place all flat fields (`topic`, `difficulty`, `tags`, etc.) _before_ any `[blanks.*]` sections.
 12. **Group related questions** that share an introduction or scenario into a single `.group.toml` file using `[[parts]]`.
-13. **After creating files**, the user can validate them with `question-bank list`. You should check that the PDF builds with `question-bank render -b <bank> --metadata --solution <exam.toml>`.
+13. **After creating files**, validate them with `question-bank validate -b <bank>`. This reports parse errors and warnings. Then check that the PDF builds with `question-bank render -b <bank> --metadata --solution <exam.toml>`.
 
 # Common Pitfalls
 
