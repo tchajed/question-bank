@@ -61,6 +61,12 @@ Exams can be exported to a QTI zip file that can be imported into Canvas:
 go run . --bank testdata/bank canvas tesdata/exams/exam.toml
 ```
 
-## Future work
+## Getting started with a coding agent
 
-- [ ] Better harness for LLM importing of questions
+This tool is designed to be easy to use with LLMs. To get started, you can take existing questions and import them in a coding agent like Claude Code or Codex. If you can get your questions as a markdown file (especially with solutions), then this can be as simple as using this prompt:
+
+```txt
+Run `question-bank docs --prompt` for instructions. Then import @midterm1.md to `./bank`.
+```
+
+If you have a Google Doc, you can download it as markdown, which works quite reliably. There are various tools to convert a Word docx to markdown. You can also import a PDF, but it will take more time and tokens.
