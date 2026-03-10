@@ -23,9 +23,12 @@ var ExamFormat string
 //go:embed import-prompt.md
 var importPromptTemplate string
 
-// ImportPrompt returns the full LLM prompt for importing exam content
-// into question-bank TOML files. It composes the prompt template with
-// the question format reference inlined.
+// ImportPrompt returns the full LLM prompt for importing exam content into
+// question-bank TOML files. It fills in the question and exam format
+// references.
 func ImportPrompt() string {
-	return strings.ReplaceAll(importPromptTemplate, "{{QUESTION_FORMAT}}", QuestionFormat)
+	return strings.ReplaceAll(
+		strings.ReplaceAll(importPromptTemplate,
+			"{{QUESTION_FORMAT}}", QuestionFormat),
+		"{{EXAM_FORMAT}}", ExamFormat)
 }
