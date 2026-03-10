@@ -40,21 +40,7 @@ var validateCmd = &cobra.Command{
 		}
 
 		// Run deep validation on successfully loaded questions
-		var warnings []string
-		for _, item := range bank {
-			if q, ok := item.(*question.Question); ok {
-				for _, w := range q.DeepValidate() {
-					warnings = append(warnings, fmt.Sprintf("%s: %s", q.Id, w))
-				}
-			}
-			if g, ok := item.(*question.QuestionGroup); ok {
-				for _, part := range g.Parts {
-					for _, w := range part.DeepValidate() {
-						warnings = append(warnings, fmt.Sprintf("%s: %s", part.Id, w))
-					}
-				}
-			}
-		}
+		warnings := question.ValidateBank(bank)
 
 		// Print parse errors
 		if len(parseErrors) > 0 {
