@@ -15,18 +15,18 @@ Add `# TODO` comments in the TOML files if there's something you missed (e.g., a
 For each question in the provided content:
 
 1. **Create a `.toml` file** for each standalone question, or a `.group.toml` file for multi-part questions that share a scenario/introduction.
-2. **Keep question content exactly as-is**. Report any definite typos to the user after doing the import.
+2. **Keep question content as-is**. If there are explanations for the solutions, remove them from the answer/question prompts and move them to the question's `explanation` field. Report any definite typos to the user after doing the import.
 3. **File naming**: Use `{topic}-{NNN}.toml` (e.g., `vm-001.toml`, `processes-002.toml`). For groups, use `{topic}-group-{NNN}.group.toml`. Start numbering at `001`.
 4. **Infer `topic`** from the subject matter. Use hierarchical naming with `/` where appropriate (e.g., `virtual-memory/paging`, `processes/fork`, `concurrency/locks`).
 5. **Do not set any tags**. Let the user decide.
 6. **Set `difficulty`** to `"medium"` if the difficulty is not clear from context.
 7. **Preserve LaTeX math notation** exactly as-is (e.g., `$O(n \log n)$`).
-8. **Multiple-choice questions**: Use `choices = [{text = "...", correct = true}, {text = "..."}]` with exactly one choice marked `correct = true`.
+8. **Multiple-choice questions**: Use `choices = [{text = "...", correct = true}, {text = "..."}]` with exactly one choice marked `correct = true`. If an answer choice mentions other choices (e.g., "A and B"), keep that - when rendered, choices will automatically be given letters and the reference will make sense.
 9. **True-false questions**: Use `answer_tf = true` or `answer_tf = false`.
 10. **Short-answer questions**: Use `answer = "..."` with the expected answer.
 11. **Fill-in-the-blank questions**: Use `[blanks.name]` sections with `answers = [...]`. Place all flat fields (`topic`, `difficulty`, `tags`, etc.) _before_ any `[blanks.*]` sections.
 12. **Group related questions** that share an introduction or scenario into a single `.group.toml` file using `[[parts]]`.
-13. **After creating files**, the user can validate them with `question-bank list`. You should check that the PDF builds with `question-bank render -b <bank> --metadata --solutions <exam.toml>`.
+13. **After creating files**, the user can validate them with `question-bank list`. You should check that the PDF builds with `question-bank render -b <bank> --metadata --solution <exam.toml>`.
 
 # Common Pitfalls
 
