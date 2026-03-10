@@ -53,7 +53,7 @@ difficulty = 'easy'
 tags = []
 ```
 
-Read the [question format reference](docs/question-reference.md) for a complete guide.
+Read the [question format reference](docs/question-format.md) for a complete guide.
 
 ## Exams (and quizzes and homeworks)
 
@@ -73,12 +73,8 @@ name = "Virtual Memory"
 questions = ["vm-001", "vm-002"]
 ```
 
-Exams can be exported to a QTI zip file that can be imported into Canvas:
+Exams can be exported to a QTI zip file that can be imported into Canvas (using Settings > Import Course Content):
 
 ```sh
-go run . --bank testdata/bank canvas tesdata/exams/exam.toml
+go run . --bank testdata/bank canvas testdata/exams/exam.toml
 ```
-
-## Canvas export
-
-The `question-bank canvas` command can convert an exam file to a Canvas QTI zip file, which can then be imported into Canvas from Settings > Import course content.
