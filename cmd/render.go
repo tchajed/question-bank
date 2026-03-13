@@ -124,6 +124,8 @@ func init() {
 	rootCmd.AddCommand(renderCmd)
 	renderCmd.Flags().StringVarP(&renderOutput, "output", "o", "", "output file path (default: exam name with .pdf or .tex extension next to the TOML file; use - for stdout with --tex)")
 	renderCmd.Flags().BoolVar(&renderTexOnly, "tex", false, "generate .tex file only (for debugging)")
+	renderCmd.Flags().BoolVar(&renderSolution, "solutions", false, "include answers and solutions in the output")
 	renderCmd.Flags().BoolVar(&renderSolution, "solution", false, "include answers and solutions in the output")
+	renderCmd.Flags().MarkHidden("solution")
 	renderCmd.Flags().BoolVar(&renderMetadata, "metadata", false, "render question metadata (ID, topic, difficulty) before each question")
 }
