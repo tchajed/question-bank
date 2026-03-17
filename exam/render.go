@@ -104,6 +104,7 @@ func writeFigure(sb *strings.Builder, figure string) {
 func (q *renderQuestion) renderTeX() string {
 	var sb strings.Builder
 
+	sb.WriteString("\\filbreak\n")
 	fmt.Fprintf(&sb, "%% %s | topic: %s | difficulty: %s", q.Id, q.Topic, q.Difficulty)
 	if q.Points > 1 {
 		fmt.Fprintf(&sb, " | points: %d", q.Points)
@@ -225,6 +226,7 @@ type renderGroup struct {
 func (g *renderGroup) renderTeX() string {
 	var sb strings.Builder
 
+	sb.WriteString("\\filbreak\n")
 	fmt.Fprintf(&sb, "%% %s | topic: %s | difficulty: %s\n", g.Id, g.Topic, g.Difficulty)
 	sb.WriteString("\\uplevel{\\vspace{1em}}\n")
 
