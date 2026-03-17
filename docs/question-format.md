@@ -148,7 +148,7 @@ The group's ID is the file path without `.group.toml`. Each part gets ID `group-
 
 | Field | Required | Description |
 |---|---|---|
-| `stem` | yes | Shared scenario or instructions shown above all parts. Use `GROUP:first` and `GROUP:last` in `\ref{}` as portable placeholders for the group's first/last part labels (e.g., `\ref{GROUP:first}`). |
+| `stem` | yes | Shared scenario or instructions shown above all parts. Use `GROUP:first` and `GROUP:last` in `\\ref{}` as portable placeholders for the group's first/last part labels (e.g., `\\ref{GROUP:first}`). |
 | `topic` | yes | Inherited by parts that don't set their own `topic`. |
 | `difficulty` | no | Inherited by parts that don't set their own `difficulty`. |
 | `tags` | no | Inherited by parts that don't set their own `tags`. |
@@ -163,7 +163,7 @@ Each `[[parts]]` entry accepts the same fields as a standalone question (`stem`,
 
 ```toml
 stem = """
-For questions \ref{GROUP:first}--\ref{GROUP:last},
+For questions \\ref{GROUP:first}--\\ref{GROUP:last},
 consider this situation: A parent process calls fork(). Both the parent and
 child run to completion without any other system calls.
 """
